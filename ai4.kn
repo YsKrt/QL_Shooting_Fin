@@ -1,0 +1,161 @@
+;山田が書く部分1つ目
+;最初の入力画面で、PlayerFの値に4を渡すことでPlayerがこの動きをする。
+
++class AI()
+	var lastbx: float
+	var lastby: float
+	var rnd: int
+	var isN: bool
+	+func control(e: \agent@Agent, p: \agent@Agent, be: list<\bullet@Bullet>, bp: list<\bullet@Bullet>): []int
+		;シュートは0で撃たない、１で撃つ
+		var shoot: int
+		;動きは、0で上、1で右上、2で右、3で右下、4で下、5で左下、6で左、7で左上、8で止まる。
+		;弾は自分の動いている方向に飛び、8の止まっている状態では撃つことができない。
+		var move: int
+		;弾の座標。リストが存在しないときは(-999.9,-999.9)にあると仮定してある。
+		;弾は1発のみ
+		var bex: float :: -999.9
+		var bey: float :: -999.9
+		var bpx: float :: -999.9
+		var bpy: float :: -999.9
+		if(^be <> 0)
+			do be.head()
+			do bex :: be.get().x + be.get().width / 2.0
+			do bey :: be.get().y + be.get().height / 2.0
+		end if
+		if(^bp <> 0)
+			do bp.head()
+			do bpx :: bp.get().x + bp.get().width / 2.0
+			do bpy :: bp.get().y + bp.get().height / 2.0
+		end if
+		;bexはBullet Enemy x の意味で、敵の弾のx座標。山田にはplayerを操作してもらうため、bexは相手の弾のx座標である。
+		
+		;eはEnemyの意味で、このクラスからは相手のx座標であるe.xと、 相手のy座標であるe.yを取り出せる。
+		{
+		例）
+		敵が自分より左にいたら
+		if(e.x < p.x)
+			右に移動する
+			do move :: 2
+		end if
+		}
+		
+		;↓↓↓↓↓↓↓↓↓↓↓↓ここに処理を書く↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
+		do move :: 8
+		if(input@pad(0, %a) = 1)
+			var f: int :: lib@ceil((lib@toDegree(lib@invRot(e.x, e.y, p.x, p.y)) - 270.0)) $ int
+			if(f < 0)
+				do f :+ 360
+			end if
+			do dbg@print("\{f / 45}\n")
+		end if
+		if(bex <> -999.9)
+			if(lib@dist(p.x + p.width / 2.0, p.y + p.height / 2.0, bex, bey) < p.width + 150.0)
+				
+				if(p.y + p.width >= bey + 25.0 & p.y <= bey - 25.0 & bey - me.lastby = 0.0)
+					if(p.y + p.width / 2.0 < \main@HEIGHT / 2.0 & bey - me.lastby = 0.0)
+						do move :: 4
+					else
+						do move :: 0
+					end if
+				else
+					if(p.y + p.width > bey - 25.0 & p.y + p.width < bey + 25.0 & bey - me.lastby = 0.0)
+						do move :: 0
+					end if
+					if(p.y > bey - 25.0 & p.y < bey + 25.0 & bey - me.lastby = 0.0)
+						do move :: 4
+					end if
+				end if
+				if(p.x + p.width >= bex + 25.0 & p.x <= bex - 25.0 & bex - me.lastbx = 0.0)
+					if(p.x + p.width / 2.0 < \main@WIDTH / 2.0 & bex - me.lastbx = 0.0)
+						do move :: 2
+					else
+						do move :: 6
+					end if
+				else
+					if(p.x + p.width > bex - 25.0 & p.x + p.width < bex + 25.0 & bex - me.lastbx = 0.0)
+						do move :: 6
+					end if
+					if(p.x > bex - 25.0 & p.x < bex + 25.0 & bex - me.lastbx = 0.0)
+						do move :: 2
+					end if
+				end if
+			end if
+			do me.lastbx :: bex
+			do me.lastby :: bey
+		else
+			do me.lastbx :: e.x
+			do me.lastby :: e.y
+			if(p.y + p.width > \main@HEIGHT - 70.0)
+				do move :: 0
+			elif(p.y < 70.0)
+				do move :: 4
+			elif(p.x < 70.0)
+				do move :: 2
+			elif(p.x + p.width > \main@WIDTH - 70.0)
+				do move :: 6
+			elif((p.x + p.width / 2.0 - \main@WIDTH).abs() < 30.0)
+				do move :: 2
+			elif((p.y + p.width / 2.0 - \main@HEIGHT).abs() < 30.0)
+				do move :: 0
+			else
+				do move :: 8
+			end if
+			if((45.0 - lib@toDegree(lib@invRot(p.x, p.y, e.x, e.y))).abs() < 30.0 |
+				|(135.0 - lib@toDegree(lib@invRot(p.x, p.y, e.x, e.y))).abs() < 30.0 |
+				|(315.0 - lib@toDegree(lib@invRot(p.x, p.y, e.x, e.y))).abs() < 30.0 |
+				|(225.0 - lib@toDegree(lib@invRot(p.x, p.y, e.x, e.y))).abs() < 30.0)
+				;do dbg@print("ななめ")
+				if(!me.isN)
+					do me.isN :: true
+					switch(me.where(p.x, p.y, p.width))
+					case 1
+						do me.rnd :: lib@rnd(0, 1) = 1 ?(4, 2)
+					case 2
+						do me.rnd :: lib@rnd(0, 1) = 1 ?(4, 6)
+					case 3
+						do me.rnd :: lib@rnd(0, 1) = 1 ?(0, 2)
+					case 4
+						do me.rnd :: lib@rnd(0, 1) = 1 ?(0, 6)
+					end switch
+				end if
+				do move :: me.rnd
+				if(p.y + p.width > \main@HEIGHT - 70.0 | p.y < 70.0 | p.x + p.width > \main@WIDTH - 70.0 | p.x < 70.0)
+					do me.isN :: false
+				end if
+			else
+				do me.rnd :: -1
+				do move :: 8
+				do me.isN :: false
+			end if
+		end if
+		if(move = 8 & bpx = -999.9)
+			var f: int :: lib@ceil((lib@toDegree(lib@invRot(e.x, e.y, p.x, p.y)) - 270.0)) $ int
+			if(f < 0)
+				do f :+ 360
+			end if
+			do move :: f / 45
+			do shoot :: 1
+		end if
+		;do move :: 8
+		;↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑
+		
+		;ここで行動をゲームに渡す。
+		ret[move, shoot]
+	end func
+	func where(x: float, y: float, s: float): int
+		if(y + s / 2.0 < \main@HEIGHT / 2.0 & x + s / 2.0 < \main@WIDTH / 2.0)
+			ret 1
+		end if
+		if(y + s / 2.0 < \main@HEIGHT / 2.0 & x + s / 2.0 > \main@WIDTH / 2.0)
+			ret 2
+		end if
+		if(y + s / 2.0 > \main@HEIGHT / 2.0 & x + s / 2.0 < \main@WIDTH / 2.0)
+			ret 3
+		end if
+		if(y + s / 2.0 >= \main@HEIGHT / 2.0 & x + s / 2.0 >= \main@WIDTH / 2.0)
+			ret 4
+		end if
+		ret 1
+	end func
+end class

@@ -1,0 +1,161 @@
++var resulttxt: []char
++class Learn()
+	+var flag_p: int
+	+var flag_e: int
+	+var count: int
+	var time: int
+	+var e_win: int
+	+var p_win: int
+	var e_point: int
+	var p_point: int
+	
+	+var readcount: int
+	+var traincount: int
+	
+	;AI
+	var ai1: \ai1@AI
+	var ai2: \ai2@AI
+	var ai3: \ai3@AI
+	var ai4: \ai4@AI
+	var ai5: \ai5@AI
+	var learn1: \learn1@Learn
+	var learn2: \learn2@Learn
+	var manual: \manual@Manual
+	
+	*func ctor()
+		do me.count :: 0
+		do @resulttxt :: ""
+		do me.ai1 :: #\ai1@AI
+		do me.ai2 :: #\ai2@AI
+		do me.ai3 :: #\ai3@AI
+		do me.ai4 :: #\ai4@AI
+		do me.ai5 :: #\ai5@AI
+		do me.learn1 :: #\learn1@Learn
+		do me.learn2 :: #\learn2@Learn
+		do me.manual :: #\manual@Manual
+	end func
+	
+	+func prepare()
+		switch(me.flag_e)
+		case 6
+			do me.learn1.readfile("q_table", me.readcount)
+		case 7
+			do me.learn2.readfile("theta", me.readcount)
+		end switch
+	end func
+	+func finish()
+		var log_file: []char :: "log"
+		switch(me.flag_e)
+		case 6
+			do log_file :: "q_learn_log"
+			do me.learn1.addlog()
+		end switch
+		do file@delFile("now_data.txt")
+		do me.writefile(log_file)
+	end func
+	
+	+func init(e: \agent@Agent, p: \agent@Agent)
+		switch(me.flag_e)
+		case 6
+			do me.learn1.init()
+			do me.learn1.savefile(me.traincount, me.count, "q_table", me.readcount)
+		case 7
+			do me.learn2.init()
+			do me.learn2.savefile(me.traincount, me.count, "theta", me.readcount)
+		end switch
+		
+		do me.show(e, p)
+		
+	end func
+	
+	;init時に表示する
+	+func show(e: \agent@Agent, p: \agent@Agent)
+		
+		if(me.traincount = me.count)
+			do @resulttxt :~ "\nかかった時間は\{(lib@sysTime() $ float - \main@start_time $ float) / 1000.0 / 60.0}分でした。\n"
+		end if
+		do me.p_point :+ 10 - e.hp
+		do me.e_point :+ 10 - p.hp
+		do dbg@print("勝率:\{me.e_win $ float / me.count $ float * 100.0}%, 回数:\{me.count}, 勝利数:(\{me.e_win}:\{me.p_win}), 体力:(\{e.hp}:\{p.hp}), ポイント:(\{me.e_point},\{me.p_point})\n")
+		var tempdata: []char :: "勝率:\{me.e_win $ float / me.count $ float * 100.0}%, 回数:\{me.count}, 勝利数:(\{me.e_win}:\{me.p_win}), 体力:(\{e.hp}:\{p.hp}), ポイント:(\{me.e_point},\{me.p_point}),  t=\{(lib@sysTime() $ float - \main@start_time $ float) / 1000.0 / 60.0}分\n"
+		do @resulttxt :~ tempdata
+		;途中経過記録
+		var h: file@Writer :: file@makeWriter("now_data.txt", true)
+		do h.writeStr(tempdata)
+		do h.fin()
+	end func
+	
+	
+	+func learn_E(e: \agent@Agent, p: \agent@Agent, be: list<\bullet@Bullet>, bp: list<\bullet@Bullet>): []int
+		var action: []int :: #[2]int
+		
+		switch(me.flag_e)
+		case 0
+			;マニュアル
+			do action :: me.manual.control()
+		case 1
+			;アタッカー
+			do action :: me.ai1.control(p, e, bp, be)
+		case 2
+			;避けて8方向に攻撃
+			do action :: me.ai2.control(p, e, bp, be)
+		case 3
+			;ランダム
+			do action :: me.ai3.control()
+		case 4
+			;山田のAI１つめ
+			do action :: me.ai4.control(p, e, bp, be)
+		case 5
+			;山田のAI２つめ
+			;エネミー基準
+			do action :: me.ai5.control(e, p, be, bp)
+		case 6
+			;Q学習8*8
+			;エネミー基準
+			do action :: me.learn1.learn(e, p, be, bp)
+		case 7
+			;関数近似
+			;エネミー基準
+			do action :: me.learn2.learn(e, p, be, bp)
+		end switch
+		
+		ret[action[0], action[1]]
+	end func
+	
+	+func learn_P(e: \agent@Agent, p: \agent@Agent, be: list<\bullet@Bullet>, bp: list<\bullet@Bullet>): []int
+		var action: []int :: #[2]int
+		
+		switch(me.flag_p)
+		case 0
+			;マニュアル
+			do action :: me.manual.control()
+		case 1
+			;アタッカー
+			;プレイヤー基準
+			do action :: me.ai1.control(e, p, be, bp)
+		case 2
+			;避けて8方向に攻撃
+			;プレイヤー基準
+			do action :: me.ai2.control(e, p, be, bp)
+		case 3
+			;ランダム
+			do action :: me.ai3.control()
+		case 4
+			;山田のAI１つめ
+			;プレイヤー基準
+			do action :: me.ai4.control(e, p, be, bp)
+		case 5
+			;山田のAI２つめ
+			do action :: me.ai5.control(p, e, bp, be)
+		end switch
+		
+		ret[action[0], action[1]]
+	end func
+	;結果をテキストファイルに保存する
+	+func writefile(filename: []char)
+		var handle: file@Writer :: file@makeWriter("\{filename}.txt", false)
+		do handle.writeStr(@resulttxt) {文字列を書き込む}
+		do handle.fin()
+	end func
+	
+end class

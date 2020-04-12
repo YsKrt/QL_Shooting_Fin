@@ -1,0 +1,48 @@
+;山田が書く部分2つ目
+;最初の入力画面で、PlayerFの値に5を渡すことでPlayerがこの動きをする。
+;エネミー基準
++class AI()
+	+func control(e: \agent@Agent, p: \agent@Agent, be: list<\bullet@Bullet>, bp: list<\bullet@Bullet>): []int
+		;シュートは0で撃たない、１で撃つ
+		var shoot: int
+		;動きは、0で上、1で右上、2で右、3で右下、4で下、5で左下、6で左、7で左上、8で止まる。
+		;弾は自分の動いている方向に飛び、8の止まっている状態では撃つことができない。
+		var move: int
+		;弾の座標。リストが存在しないときは(-999.9,-999.9)にあると仮定してある。
+		;弾は1発のみ
+		var bex: float :: -999.9
+		var bey: float :: -999.9
+		var bpx: float :: -999.9
+		var bpy: float :: -999.9
+		if(^be <> 0)
+			do be.head()
+			do bex :: be.get().x + be.get().width / 2.0
+			do bey :: be.get().y + be.get().height / 2.0
+		end if
+		if(^bp <> 0)
+			do bp.head()
+			do bpx :: bp.get().x + bp.get().width / 2.0
+			do bpy :: bp.get().y + bp.get().height / 2.0
+		end if
+		;bexはBullet Enemy x の意味で、敵の弾のx座標。山田にはplayerを操作してもらうため、bexは相手の弾のx座標である。
+		
+		;eはEnemyの意味で、このクラスからは相手のx座標であるe.xと、 相手のy座標であるe.yを取り出せる。
+		;例）
+		{
+		敵が自分より左にいたら
+		if(e.x < p.x)
+			右に移動する
+			do move :: 2
+		end if
+		}
+		
+		;↓↓↓↓↓↓↓↓↓↓↓↓ここに処理を書く↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
+		
+		
+		
+		;↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑
+		
+		;ここで行動をゲームに渡す。
+		ret[move, shoot]
+	end func
+end class

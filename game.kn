@@ -1,0 +1,157 @@
++class Game()
+	+var learn: \learn@Learn
+	+var e: \agent@Agent
+	+var p: \agent@Agent
+	+var bp: list<\bullet@Bullet>
+	+var be: list<\bullet@Bullet>
+	var time: int
+	*func ctor()
+		do me.learn :: #\learn@Learn
+		
+		var w: int
+		var h: int
+		do wnd@screenSize(&w, &h)
+		do \main@WIDTH :: w $ float / 10.0 * 8.0
+		do \main@HEIGHT :: h $ float / 10.0 * 8.0
+		do \main@wndMain :: wnd@makeWnd(null, %aspect, \main@WIDTH $ int, \main@HEIGHT $ int, "Title")
+		do \main@drawMain :: wnd@makeDraw(\main@wndMain, 0, 0, \main@WIDTH $ int, \main@HEIGHT $ int, %scale, %scale, false)
+		do \main@font :: draw@makeFont("Segoe UI Black", 20, false, false, false, 20.0)
+		do \main@wndMain.setPos(w / 10, h / 10, \main@WIDTH $ int, \main@HEIGHT $ int)
+		
+		do me.e :: #\agent@Agent
+		do me.p :: #\agent@Agent
+		do me.e.init(0.0, 0.0, 100.0, 100.0, 0.0, 0.0, 1)
+		do me.p.init(\main@WIDTH - 100.0, \main@HEIGHT - 100.0, 100.0, 100.0, 0.0, 0.0, 0)
+		do me.bp :: #list<\bullet@Bullet>
+		do me.be :: #list<\bullet@Bullet>
+		
+	end func
+	
+	+func init()
+		
+		var flag: int
+		if(me.e.hp = 0 | me.p.hp = 0 | me.time > 5000)
+			do flag :: 1
+		end if
+		
+		if(flag = 1)
+			
+			do me.learn.count :+ 1
+			if(me.e.hp > me.p.hp)
+				do me.learn.e_win :+ 1
+			elif(me.p.hp > me.e.hp)
+				do me.learn.p_win :+ 1
+			end if
+			do me.learn.init(me.e, me.p)
+			
+			do me.time :: 0
+			do me.e.init(0.0, 0.0, 100.0, 100.0, 0.0, 0.0, 1)
+			do me.p.init(\main@WIDTH - 100.0, \main@HEIGHT - 100.0, 100.0, 100.0, 0.0, 0.0, 0)
+			do me.be.head()
+			while(!me.be.term())
+				do me.be.del()
+			end while
+			do me.bp.head()
+			while(!me.bp.term())
+				do me.bp.del()
+			end while
+		end if
+		
+	end func
+	
+	+func update()
+		do me.bp.head()
+		while(!me.bp.term())
+			var delF: int :: 0
+			var item: \bullet@Bullet :: me.bp.get()
+			do item.play()
+			if(item.vanish() = -1)
+				do delF :: 1
+			end if
+			if((me.e.x + 50.0 - item.x - 25.0).abs() < 50.0 + 25.0 & (me.e.y + 50.0 - item.y - 25.0).abs() < 50.0 + 25.0)
+				do me.e.hp :- 1
+				do delF :: 1
+			end if
+			if(delF = 1)
+				do me.bp.del()
+			else
+				do me.bp.next()
+			end if
+		end while
+		
+		do me.be.head()
+		while(!me.be.term())
+			var delF: int :: 0
+			var item: \bullet@Bullet :: me.be.get()
+			do item.play()
+			if(item.vanish() = -1)
+				do delF :: 1
+			end if
+			if((me.p.x + 50.0 - item.x - 25.0).abs() < 50.0 + 25.0 & (me.p.y + 50.0 - item.y - 25.0).abs() < 50.0 + 25.0)
+				do me.p.hp :- 1
+				do delF :: 1
+			end if
+			if(delF = 1)
+				do me.be.del()
+			else
+				do me.be.next()
+			end if
+		end while
+		
+		;弾同士の反発
+		do me.be.head()
+		while(!me.be.term())
+			do me.bp.head()
+			while(!me.bp.term())
+				if((me.bp.get().x + 25.0 - me.be.get().x - 25.0).abs() < 25.0 + 25.0 & (me.bp.get().y + 25.0 - me.be.get().y - 25.0).abs() < 25.0 + 25.0)
+					do me.bp.get().veloY :$ me.be.get().veloX
+					do me.bp.get().veloX :$ me.be.get().veloY
+					do me.bp.get().flag :$ me.be.get().flag
+					do me.bp.get().flag :$ me.be.get().flag
+				end if
+				do me.bp.next()
+			end while
+			do me.be.next()
+		end while
+		
+	end func
+	
+	+func draw()
+		do draw@render(60)
+		
+		do \main@font.draw(\main@WIDTH - 300.0, 1.0, "Enemy HP:\{me.e.hp}", 0xFFCCCCFF)
+		do draw2d@rect(me.e.x, me.e.y, me.e.width, me.e.height, 0xFF3333CC)
+		do \main@font.draw(1.0, 1.0, "Player HP:\{me.p.hp}", 0xFFFFCCCC)
+		do draw2d@rect(me.p.x, me.p.y, me.p.width, me.p.height, 0xFFCC3333)
+		
+		do me.be.head()
+		while(!me.be.term())
+			var item: \bullet@Bullet :: me.be.get()
+			do item.draw(1)
+			do me.be.next()
+		end while
+		do me.bp.head()
+		while(!me.bp.term())
+			var item: \bullet@Bullet :: me.bp.get()
+			do item.draw(0)
+			do me.bp.next()
+		end while
+	end func
+	
+	+func control()
+		var ea: []int :: me.learn.learn_E(me.e, me.p, me.be, me.bp)
+		do me.e.play(ea[0], ea[1], me.be)
+		var pa: []int :: me.learn.learn_P(me.e, me.p, me.be, me.bp)
+		do me.p.play(pa[0], pa[1], me.bp)
+	end func
+	+func mainloop()
+		do me.time :+ 1
+		do me.update()
+		do me.control()
+		do me.init()
+		if(me.learn.traincount <= me.learn.count)
+			do me.draw()
+		end if
+	end func
+	
+end class

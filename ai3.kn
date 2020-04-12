@@ -1,0 +1,12 @@
+;ランダム
++class AI()
+	var move: int
+	var shoot: int
+	+func control(): []int
+		if(lib@rnd(1, 10) = 10)
+			do me.move :: lib@rnd(0, 8)
+			do me.shoot :: lib@rnd(0, 1)
+		end if
+		ret[me.move, me.shoot]
+	end func
+end class

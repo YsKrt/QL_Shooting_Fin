@@ -1,0 +1,39 @@
++class Manual()
+	+func control(): []int
+		var move: int
+		var shoot: int
+		if(input@key(%a) = true)
+			do move :: 6
+		end if
+		if(input@key(%d) = true)
+			do move :: 2
+		end if
+		if(input@key(%w) = true)
+			do move :: 0
+		end if
+		if(input@key(%s) = true)
+			do move :: 4
+		end if
+		if(input@key(%w) = true & input@key(%d) = true)
+			do move :: 1
+		end if
+		if(input@key(%s) = true & input@key(%d) = true)
+			do move :: 3
+		end if
+		if(input@key(%a) = true & input@key(%s) = true)
+			do move :: 5
+		end if
+		if(input@key(%w) = true & input@key(%a) = true)
+			do move :: 7
+		end if
+		if((input@key(%w) = true & input@key(%s) = true) | (input@key(%a) = true & input@key(%d) = true) | (input@key(%a) = false & input@key(%d) = false & input@key(%w) = false & input@key(%s) = false))
+			do move :: 8
+		end if
+		if(input@key(%space) = true)
+			do shoot :: 1
+		else
+			do shoot :: 0
+		end if
+		ret[move, shoot]
+	end func
+end class

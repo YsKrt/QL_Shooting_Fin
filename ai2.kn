@@ -1,0 +1,124 @@
++var x_num: int :: 10
++var y_num: int :: 10
+;プレイヤー基準
++class AI()
+	+func control(e: \agent@Agent, p: \agent@Agent, be: list<\bullet@Bullet>, bp: list<\bullet@Bullet>): []int
+		var shoot: int
+		var move: int
+		;敵の方向を撃ち、敵の弾をよけるAI
+		do shoot :: lib@rnd(0, 1)
+		;敵の方向へ弾を撃つ
+		var p_pos: int :: me.get_next_pos(p.x, p.y, 8)
+		var px: int :: p_pos % @y_num
+		var py: int :: (p_pos - px) / @y_num
+		var e_pos: int :: me.get_next_pos(e.x, e.y, 8)
+		var ex: int :: e_pos % @y_num
+		var ey: int :: (e_pos - ex) / @y_num
+		if(px = ex)
+			if(lib@rnd(1, 100) <= 50)
+				do move :: 0
+			else
+				do move :: 4
+			end if
+		elif(py = ey)
+			if(lib@rnd(1, 100) <= 50)
+				do move :: 2
+			else
+				do move :: 6
+			end if
+		elif((px > ex & py > ey) | (px < ex & py < ey))
+			if(lib@rnd(1, 100) <= 50)
+				do move :: 3
+			else
+				do move :: 7
+			end if
+		elif((px > ex & py < ey) | (px < ex & py > ey))
+			if(lib@rnd(1, 100) <= 50)
+				do move :: 1
+			else
+				do move :: 5
+			end if
+		end if
+		;敵の弾を避ける(こっちを敵に弾を当てるより優先するから下に書いている。)
+		do be.head()
+		while(!be.term())
+			var item: \bullet@Bullet :: be.get()
+			var be_pos: int :: me.get_next_pos(item.x, item.y, 8)
+			var bex: int :: be_pos % @y_num
+			var bey: int :: (be_pos - bex) / @y_num
+			if(px = bex & (item.flag = 4 | item.flag = 0))
+				if(px = @x_num - 1)
+					do move :: 6
+				else
+					do move :: 2
+				end if
+			elif(py = bey & (item.flag = 2 | item.flag = 6))
+				if(py = @y_num - 1)
+					do move :: 0
+				else
+					do move :: 4
+				end if
+			elif(((px > bex & py > bey) & item.flag = 3) | ((px < ex & py < ey) & item.flag = 7) | ((px > bex & py < bey) & item.flag = 1) | ((px < bex & py > bey) & item.flag = 5))
+				if(px = @x_num - 1)
+					do move :: 6
+				else
+					do move :: 2
+				end if
+			end if
+			do be.next()
+		end while
+		
+		ret[move, shoot]
+	end func
+	
+	;座標をマス目に変換
+	+func get_next_pos(x: float, y: float, move: int): int
+		var width: float :: \main@WIDTH / @x_num $ float
+		var height: float :: \main@HEIGHT / @y_num $ float
+		
+		var v: float :: 15.0
+		switch(move)
+		case 0
+			do y :- v
+		case 1
+			do x :+ v
+			do y :- v
+		case 2
+			do x :+ v
+		case 3
+			do x :+ v
+			do y :+ v
+		case 4
+			do y :+ v
+		case 5
+			do x :- v
+			do y :+ v
+		case 6
+			do x :- v
+		case 7
+			do x :- v
+			
+		case 8
+		end switch
+		if(x < 0.0)
+			do x :: 0.0
+		end if
+		if(x > \main@WIDTH)
+			do x :: \main@WIDTH
+		end if
+		if(y < 0.0)
+			do y :: 0.0
+		end if
+		if(y > \main@HEIGHT)
+			do y :: \main@HEIGHT
+		end if
+		for Y(0, @y_num - 1)
+			for X(0, @x_num - 1)
+				if(x >= X $ float * width & x <= (X $ float + 1.0) * width & y >= Y $ float * height & y <= (Y $ float + 1.0) * height)
+					ret X + Y * @y_num
+				end if
+			end for
+		end for
+	end func
+	
+end class

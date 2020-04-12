@@ -1,0 +1,317 @@
++var q_table: [][][][]float
++var x_num: int :: 8
++var y_num: int :: 8
+;エネミー基準
++class Learn()
+	var move_flag_e: int
+	var next_m: int
+	var next_s: int
+	var next_p: int
+	var epsilon: int
+	*func ctor()
+		do me.epsilon :: 1
+		do @q_table :: #[@x_num * @y_num, @x_num * @y_num + 1, @x_num * @y_num, @x_num * @y_num + 1]float
+	end func
+	
+	+func init()
+		;マスの中心に行ってから新しく行動するためのフラグ
+		do me.move_flag_e :: 0
+	end func
+	
+	+func get_reward_E(ep: int, pp: int, bep: int, bpp: int): float
+		var reward: float :: 0.0
+		if(ep = bpp)
+			do reward :+ -77.0
+		end if
+		if(bep = pp)
+			do reward :+ 55.5
+		end if
+		ret reward
+	end func
+	
+	+func learn(e: \agent@Agent, p: \agent@Agent, be: list<\bullet@Bullet>, bp: list<\bullet@Bullet>): []int
+		
+		var q_max: float :: 0.0
+		var r: float
+		
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;今の状態
+		var bpp: int
+		var bpm: int
+		var bep: int
+		var bem: int
+		var ep: int :: me.get_next_pos(e.x + e.width / 2.0, e.y + e.height / 2.0, 8)
+		
+		if(^bp <> 0)
+			do bp.head()
+			do bpp :: me.get_next_pos(bp.get().x + bp.get().width / 2.0, bp.get().y + bp.get().height / 2.0, 8)
+			do bpm :: bp.get().flag
+		else
+			do bpp :: @x_num * @y_num
+			do bpm :: 8
+		end if
+		var pp: int :: me.get_next_pos(p.x + p.width / 2.0, p.y + p.height / 2.0, 8)
+		var pm: int :: p.moveF
+		if(^be <> 0)
+			do be.head()
+			do bep :: me.get_next_pos(be.get().x + be.get().width / 2.0, be.get().y + be.get().height / 2.0, 8)
+			do bem :: be.get().flag
+		else
+			do bep :: @x_num * @y_num
+			do bem :: 8
+		end if
+		
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;次の状態
+		var _bpp: int
+		var _bpm: int
+		var _bep: int
+		var _bem: int
+		if(^bp <> 0)
+			do bp.head()
+			do _bpp :: me.enemy_next_pos(ep, bp.get().flag)
+			do _bpm :: bpm
+		else
+			do _bpp :: @x_num * @y_num
+			do _bpm :: 8
+		end if
+		var _pp: int :: me.enemy_next_pos(pp, p.moveF)
+		var _pm: int :: pm
+		
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;探索
+		
+		for move(0, 8)
+			var _ep: int :: me.enemy_next_pos(ep, move)
+			for shoot(0, 1)
+				if(bem = 8 & move <> 8)
+					do _bep :: me.enemy_next_pos(ep, move) * shoot
+					do _bem :: move * shoot + 8 * (1 - shoot)
+				elif(bem <> 8)
+					do _bep :: me.enemy_next_pos(bep, bem)
+					do _bem :: bem
+				else
+					do _bep :: @x_num * @y_num
+					do _bem :: 8
+				end if
+				
+				;次のQ値最大を求める
+				if(@q_table[_pp][_bpp][_ep][_bep] > q_max | (move = 0 & shoot = 0))
+					do q_max :: @q_table[_pp][_bpp][_ep][_bep]
+					if(me.move_flag_e = 0)
+						do me.next_m :: move
+						do me.next_s :: shoot
+						do me.next_p :: me.enemy_next_pos(ep, me.next_m)
+					end if
+				end if
+			end for
+		end for
+		
+		;Q値の更新
+		do r :: me.get_reward_E(ep, pp, bem <> 8 ?(bep, -1), bpm <> 8 ?(bpp, -1))
+		var eta: float :: 0.2
+		var gamma: float :: 0.8
+		do @q_table[pp][bpp][ep][bep] :: @q_table[pp][bpp][ep][bep] + eta * (r + gamma * q_max - @q_table[pp][bpp][ep][bep])
+		;ランダムで動くのはあとでなおす
+		if(lib@rnd(1, 10) < me.epsilon | q_max = 0.0)
+			if(me.move_flag_e = 0)
+				do me.next_m :: lib@rnd(0, 7)
+				do me.next_s :: lib@rnd(0, 1)
+				do me.next_p :: me.enemy_next_pos(ep, me.next_m)
+			end if
+		end if
+		
+		ret[me.enemy_move_to_pos(ep, e.x + e.width / 2.0, e.y + e.height / 2.0, me.next_p), me.next_s]
+		
+	end func
+	;マス目単位の移動
+	+func enemy_next_pos(ep: int, move: int): int
+		var x: int :: ep % @y_num
+		var y: int :: (ep - x) / @y_num
+		switch(move)
+		case 0
+			do y :- 1
+		case 1
+			do x :+ 1
+			do y :- 1
+		case 2
+			do x :+ 1
+		case 3
+			do x :+ 1
+			do y :+ 1
+		case 4
+			do y :+ 1
+		case 5
+			do x :- 1
+			do y :+ 1
+		case 6
+			do x :- 1
+		case 7
+			do x :- 1
+			do y :- 1
+		case 8
+		end switch
+		
+		if(x < 0)
+			do x :: 0
+		elif(x > @x_num - 1)
+			do x :: @x_num - 1
+		end if
+		if(y < 0)
+			do y :: 0
+		elif(y > @y_num - 1)
+			do y :: @y_num - 1
+		end if
+		
+		ret x + y * @y_num
+	end func
+	;マスの中心へ移動する行動を返す
+	+func enemy_move_to_pos(ep: int, ex: float, ey: float, next_pos: int): int
+		
+		if(ep <> next_pos)
+			do me.move_flag_e :: 1
+		end if
+		
+		var x: int :: next_pos % @y_num
+		var y: int :: (next_pos - x) / @y_num
+		var flag: int
+		
+		var X: float :: \main@WIDTH $ float / @x_num $ float * x $ float + \main@WIDTH $ float / @x_num $ float / 2.0
+		var Y: float :: \main@HEIGHT $ float / @y_num $ float * y $ float + \main@HEIGHT $ float / @y_num $ float / 2.0
+		
+		if(ex < X - 15.0 & ey < Y - 15.0)
+			do flag :: 3
+		elif(ex > X + 15.0 & ey > Y + 15.0)
+			do flag :: 7
+		elif(ex < X - 15.0 & ey > Y + 15.0)
+			do flag :: 1
+		elif(ex > X + 15.0 & ey < Y - 15.0)
+			do flag :: 5
+		elif(ex > X + 15.0)
+			do flag :: 6
+		elif(ex < X - 15.0)
+			do flag :: 2
+		elif(ey > Y + 15.0)
+			do flag :: 0
+		elif(ey < Y - 15.0)
+			do flag :: 4
+		else
+			do me.move_flag_e :: 0
+			do flag :: 8
+		end if
+		
+		ret flag
+	end func
+	
+	;座標をマス目に変換
+	+func get_next_pos(x: float, y: float, move: int): int
+		var width: float :: \main@WIDTH / @x_num $ float
+		var height: float :: \main@HEIGHT / @y_num $ float
+		
+		var v: float :: 15.0
+		switch(move)
+		case 0
+			do y :- v
+		case 1
+			do x :+ v
+			do y :- v
+		case 2
+			do x :+ v
+		case 3
+			do x :+ v
+			do y :+ v
+		case 4
+			do y :+ v
+		case 5
+			do x :- v
+			do y :+ v
+		case 6
+			do x :- v
+		case 7
+			do x :- v
+		case 8
+		end switch
+		if(x < 0.0)
+			do x :: 0.0
+		end if
+		if(x > \main@WIDTH)
+			do x :: \main@WIDTH
+		end if
+		if(y < 0.0)
+			do y :: 0.0
+		end if
+		if(y > \main@HEIGHT)
+			do y :: \main@HEIGHT
+		end if
+		for Y(0, @y_num - 1)
+			for X(0, @x_num - 1)
+				if(x >= X $ float * width & x <= (X $ float + 1.0) * width & y >= Y $ float * height & y <= (Y $ float + 1.0) * height)
+					ret X + Y * @y_num
+				end if
+			end for
+		end for
+	end func
+	
+	+func readfile(filename: []char, traincount: int)
+		if(file@exist(filename ~ "_\{traincount}.txt"))
+			var handle: file@Reader :: file@makeReader(filename ~ "_\{traincount}.txt")
+			do handle.delimiter([',']) {区切り文字の設定}
+			
+			for i1(0, @x_num * @y_num - 1)
+				for i2(0, @x_num * @y_num)
+					for i3(0, @x_num * @y_num - 1)
+						for i4(0, @x_num * @y_num)
+							do @q_table[i1][i2][i3][i4] :: handle.readFloat()
+						end for
+					end for
+				end for
+			end for
+			do handle.fin()
+			do dbg@print("ファイル読み込み完了,t=\{(lib@sysTime() $ float - \main@start_time $ float) / 1000.0}秒\n")
+			do \learn@resulttxt :~ "ファイル読み込み完了,t=\{(lib@sysTime() $ float - \main@start_time $ float) / 1000.0}秒\n"
+		end if
+	end func
+	;init時
+	+func savefile(traincount: int, count: int, filename: []char, readcount: int)
+		var savecount: int
+		if(traincount <= 1000)
+			do savecount :: 100
+		elif(traincount <= 3000)
+			do savecount :: 500
+		else
+			do savecount :: 1000
+		end if
+		
+		if(count % savecount = 0)
+			var handle: file@Writer :: file@makeWriter(filename ~ "_\{readcount + count}.txt", false)
+			for i1(0, @x_num * @y_num - 1)
+				for i2(0, @x_num * @y_num)
+					for i3(0, @x_num * @y_num - 1)
+						for i4(0, @x_num * @y_num)
+							do handle.writeFloat(@q_table[i1][i2][i3][i4]) {小数を書き込む}
+							do handle.writeChar(',')
+						end for
+					end for
+				end for
+			end for
+			do handle.fin()
+			do \learn@resulttxt :~ "保存しました。 t=\{(lib@sysTime() $ float - \main@start_time $ float) / 1000.0 / 60.0}分\n"
+			do dbg@print("保存しました\n")
+		end if
+	end func
+	
+	+func addlog()
+		var learncount: int
+		var alllearn: int
+		for i1(0, @x_num * @y_num - 1)
+			for i2(0, @x_num * @y_num)
+				for i3(0, @x_num * @y_num - 1)
+					for i4(0, @x_num * @y_num)
+						if(@q_table[i1][i2][i3][i4] <> 0.0)
+							do learncount :+ 1
+						end if
+						do alllearn :+ 1
+					end for
+				end for
+			end for
+		end for
+		do \learn@resulttxt :~ "\nQ tableの要素数\{alllearn}個中、\{learncount}個だけ学習しているため、学習率は\{learncount $ float / alllearn $ float * 100.0}%です。\n"
+	end func
+end class

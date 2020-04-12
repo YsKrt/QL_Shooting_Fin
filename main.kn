@@ -1,0 +1,39 @@
++var wndMain: wnd@Wnd
++var drawMain: wnd@Draw
++var WIDTH: float
++var HEIGHT: float
++var font: draw@Font
++var start_time: int
+
+func main()
+	
+	var result: []char
+	do result :: wndex@inputBox(null, "学習回数, 読み込む回数, PlayerF, EnemyF", "Q Learning", "0,0,0,7", null)
+	
+	if(result =& null)
+		ret
+	end if
+	
+	var game: \game@Game :: #\game@Game
+	var data: [][]char :: result.split(",")
+	var existed: bool
+	
+	do @start_time :: lib@sysTime()
+	do dbg@print("入力値:\{data[0].toInt(&existed)},\{data[1].toInt(&existed)},\{data[2].toInt(&existed)},\{data[3].toInt(&existed)}\n")
+	do \learn@resulttxt :~ "入力値:\{data[0].toInt(&existed)},\{data[1].toInt(&existed)},\{data[2].toInt(&existed)},\{data[3].toInt(&existed)}\n"
+	
+	do game.learn.traincount :: data[0].toInt(&existed)
+	do game.learn.readcount :: data[1].toInt(&existed)
+	do game.learn.flag_p :: data[2].toInt(&existed)
+	do game.learn.flag_e :: data[3].toInt(&existed)
+	
+	
+	do game.learn.prepare()
+	
+	while(wnd@act())
+		do game.mainloop()
+	end while
+	
+	do game.learn.finish()
+	
+end func

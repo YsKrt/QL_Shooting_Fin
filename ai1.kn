@@ -1,0 +1,213 @@
+
+;プレイヤー基準
++class AI()
+	;正確なアタッカー
+	+var move: int
+	+var shoot: int
+	var time: int
+	var a_way: int
+	var distance: float
+	var change_a: int
+	*func ctor()
+		do me.distance :: 150.0
+	end func
+	+func control(e: \agent@Agent, p: \agent@Agent, be: list<\bullet@Bullet>, bp: list<\bullet@Bullet>): []int
+		var px: float :: p.x + p.width / 2.0
+		var py: float :: p.y + p.height / 2.0
+		var ex: float :: e.x + e.width / 2.0
+		var ey: float :: e.y + e.height / 2.0
+		var bex: float :: -999.9
+		var bey: float :: -999.9
+		var bpx: float :: -999.9
+		var bpy: float :: -999.9
+		if(^be <> 0)
+			do be.head()
+			do bex :: be.get().x + be.get().width / 2.0
+			do bey :: be.get().y + be.get().height / 2.0
+		end if
+		if(^bp <> 0)
+			do bp.head()
+			do bpx :: bp.get().x + bp.get().width / 2.0
+			do bpy :: bp.get().y + bp.get().height / 2.0
+		end if
+		
+		do me.time :+ 1
+		var shoot: int
+		
+		;壁際に来たら
+		if(((px.abs() < 100.0 | (\main@WIDTH - px).abs() < 100.0 | py.abs() < 100.0 | (\main@HEIGHT - py).abs() < 100.0)) & me.time % 7 = 1)
+			;	do dbg@print("\{me.distance}\n")
+			do me.a_way :: (me.a_way + 1) % 8
+			do me.distance :/ 1.2
+			;change_aをここで使わない理由は、壁側にいるとき目的地まで行こうとして止まってる時間ができてしまうから
+		end if
+		
+		switch(me.a_way)
+		case 0
+			if(px < ex + me.distance)
+				do me.move :: 2
+			elif(py < ey - 30.0)
+				do me.move :: 4
+			elif(py > ey + 30.0)
+				do me.move :: 0
+			else
+				if(me.time % 16 < 8)
+					do me.move :: 2
+				else
+					do me.move :: 6
+					do shoot :: 1
+				end if
+			end if
+		case 1
+			var tx: float :: {(py - ey).abs() +}ex + +me.distance
+			var ty: float :: (px - ex).abs() + ey + +me.distance
+			if(px < tx - 30.0)
+				do me.move :: 2
+			elif(px > tx + 30.0)
+				do me.move :: 6
+			elif(py < ty - 30.0)
+				do me.move :: 4
+			elif(py > ty + 30.0)
+				do me.move :: 0
+			else
+				if(me.time % 16 < 8)
+					do me.move :: 3
+				else
+					do me.move :: 7
+					do shoot :: 1
+				end if
+			end if
+		case 2
+			if(py < ey + me.distance)
+				do me.move :: 4
+			elif(px < ex - 30.0)
+				do me.move :: 2
+			elif(px > ex + 30.0)
+				do me.move :: 6
+			else
+				if(me.time % 16 < 8)
+					do me.move :: 4
+				else
+					do me.move :: 0
+					do shoot :: 1
+				end if
+			end if
+		case 3
+			var tx: float :: { -(py - ey).abs()}+ex - me.distance
+			var ty: float :: (px - ex).abs() + ey + me.distance
+			if(px < tx - 30.0)
+				do me.move :: 2
+			elif(px > tx + 30.0)
+				do me.move :: 6
+			elif(py < ty - 30.0)
+				do me.move :: 4
+			elif(py > ty + 30.0)
+				do me.move :: 0
+			else
+				if(me.time % 16 < 8)
+					do me.move :: 5
+				else
+					do me.move :: 1
+					do shoot :: 1
+				end if
+			end if
+		case 4
+			if(px > ex - me.distance)
+				do me.move :: 6
+			elif(py < ey - 30.0)
+				do me.move :: 4
+			elif(py > ey + 30.0)
+				do me.move :: 0
+			else
+				if(me.time % 16 < 8)
+					do me.move :: 6
+				else
+					do me.move :: 2
+					do shoot :: 1
+				end if
+			end if
+		case 5
+			var tx: float :: { -(py - ey).abs() + }ex - me.distance
+			var ty: float :: -(px - ex).abs() + ey - me.distance
+			if(px < tx - 30.0)
+				do me.move :: 2
+			elif(px > tx + 30.0)
+				do me.move :: 6
+			elif(py < ty - 30.0)
+				do me.move :: 4
+			elif(py > ty + 30.0)
+				do me.move :: 0
+			else
+				if(me.time % 16 < 8)
+					do me.move :: 7
+				else
+					do me.move :: 3
+					do shoot :: 1
+				end if
+			end if
+		case 6
+			if(py > ey - me.distance)
+				do me.move :: 0
+			elif(px < ex - 30.0)
+				do me.move :: 2
+			elif(px > ex + 30.0)
+				do me.move :: 6
+			else
+				if(me.time % 16 < 8)
+					do me.move :: 0
+				else
+					do me.move :: 4
+					do shoot :: 1
+				end if
+			end if
+		case 7
+			var tx: float :: {(py - ey).abs() +}ex + me.distance
+			var ty: float :: -(px - ex).abs() + ey - me.distance
+			if(px < tx - 30.0)
+				do me.move :: 2
+			elif(px > tx + 30.0)
+				do me.move :: 6
+			elif(py < ty - 30.0)
+				do me.move :: 4
+			elif(py > ty + 30.0)
+				do me.move :: 0
+			else
+				if(me.time % 16 < 8)
+					do me.move :: 1
+				else
+					do me.move :: 5
+					do shoot :: 1
+				end if
+			end if
+		end switch
+		
+		
+		;弾同士がぶつかったら
+		if(((bpx - bex).abs() < 80.0 | (bpy - bey).abs() < 80.0) & me.time % 10 = 0)
+			do me.change_a :: 1
+		end if
+		;敵の弾が近づいたら
+		if(((px - bex).abs() < 150.0 | (py - bey).abs() < 150.0) & me.time % 10 = 0)
+			do me.change_a :: 1
+		end if
+		;敵に近づきすぎたら
+		if(((px - ex).abs() < 150.0 | (py - ey).abs() < 150.0) & me.time % 100 = 0)
+			do me.change_a :: 1
+		end if
+		do me.shoot :: shoot
+		
+		if(me.change_a = 1 & me.time % 17 = 0)
+			do me.a_way :: (me.a_way + 1) % 8
+			do me.distance :+ 10.0
+			do me.change_a :: 0
+		end if
+		
+		ret[me.move, shoot]
+		
+	end func
+	
+	
+	
+	
+	
+end class
