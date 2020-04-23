@@ -2,14 +2,8 @@
 ;プレイヤー基準
 +class AI()
 	;正確なアタッカー
-	+var move: int
-	+var shoot: int
-	var time: int
 	var a_way: int
-	var distance: float
-	var change_a: int
 	*func ctor()
-		do me.distance :: 150.0
 	end func
 	+func control(e: \agent@Agent, p: \agent@Agent, be: list<\bullet@Bullet>, bp: list<\bullet@Bullet>): []int
 		var px: float :: p.x + p.width / 2.0
@@ -20,8 +14,10 @@
 		var bey: float :: -999.9
 		var bpx: float :: -999.9
 		var bpy: float :: -999.9
+		var bem: int :: 9
 		if(^be <> 0)
 			do be.head()
+			do bem :: be.get().flag
 			do bex :: be.get().x + be.get().width / 2.0
 			do bey :: be.get().y + be.get().height / 2.0
 		end if
@@ -31,182 +27,300 @@
 			do bpy :: bp.get().y + bp.get().height / 2.0
 		end if
 		
-		do me.time :+ 1
-		var shoot: int
 		
+		var shoot: int
+		var move: int
+		var distance: float :: 600.0
+		var changeF: int
+		
+		var wallF: int :: -999
 		;壁際に来たら
-		if(((px.abs() < 100.0 | (\main@WIDTH - px).abs() < 100.0 | py.abs() < 100.0 | (\main@HEIGHT - py).abs() < 100.0)) & me.time % 7 = 1)
-			;	do dbg@print("\{me.distance}\n")
-			do me.a_way :: (me.a_way + 1) % 8
-			do me.distance :/ 1.2
-			;change_aをここで使わない理由は、壁側にいるとき目的地まで行こうとして止まってる時間ができてしまうから
+		if(((px < 100.0 | (\main@WIDTH - px).abs() < 100.0 | py < 100.0 | (\main@HEIGHT - py).abs() < 100.0)))
+			if(px < 100.0)
+				do wallF :: 6
+			end if
+			if((\main@WIDTH - px).abs() < 100.0)
+				do wallF :: 2
+			end if
+			if(py < 100.0)
+				do wallF :: 0
+			end if
+			if((\main@HEIGHT - py).abs() < 100.0)
+				do wallF :: 4
+			end if
+			do changeF :: 1
 		end if
 		
+		;敵が近いとき
+		if((px - ex).abs() < 100.0 & (py - ey).abs() < 100.0)
+			do changeF :: 1
+			;敵が追いかけてくる場合距離を保とうとずっと移動しかしないため攻撃する
+			do shoot :: 1
+		end if
+		
+		;攻撃方法選択
+		if(changeF = 1)
+			var e_pos: int :: me.get_pos(ex, ey)
+			switch(e_pos)
+			case 0
+				do me.a_way :: 3
+			case 1
+				do me.a_way :: 4
+			case 2
+				do me.a_way :: 5
+			case 3
+				do me.a_way :: 2
+			case 4
+				do me.a_way :: 7
+			case 5
+				do me.a_way :: 6
+			case 6
+				do me.a_way :: 1
+			case 7
+				do me.a_way :: 0
+			case 8
+				do me.a_way :: 7
+			end switch
+		end if
+		
+		
+		
+		;攻撃する
 		switch(me.a_way)
 		case 0
-			if(px < ex + me.distance)
-				do me.move :: 2
-			elif(py < ey - 30.0)
-				do me.move :: 4
-			elif(py > ey + 30.0)
-				do me.move :: 0
+			if(px > ex + 65.0)
+				do move :: 6
+			elif(px < ex - 65.0)
+				do move :: 2
 			else
-				if(me.time % 16 < 8)
-					do me.move :: 2
+				if(py > ey - distance)
+					do move :: 0
 				else
-					do me.move :: 6
+					do move :: 4
 					do shoot :: 1
 				end if
 			end if
 		case 1
-			var tx: float :: {(py - ey).abs() +}ex + +me.distance
-			var ty: float :: (px - ex).abs() + ey + +me.distance
-			if(px < tx - 30.0)
-				do me.move :: 2
-			elif(px > tx + 30.0)
-				do me.move :: 6
-			elif(py < ty - 30.0)
-				do me.move :: 4
-			elif(py > ty + 30.0)
-				do me.move :: 0
+			var tx: float :: px
+			var ty: float :: (tx - ex).abs() * -1.0 + ey
+			if(py < ty - 65.0)
+				do move :: 4
+			elif(py > ty + 65.0 & wallF <> 0)
+				do move :: 0
+			elif(ex > px)
+				do move :: 2
 			else
-				if(me.time % 16 < 8)
-					do me.move :: 3
+				if(lib@sqrt((ex - px) ^ 2.0 + (ey - py) ^ 2.0) < distance)
+					do move :: 1
 				else
-					do me.move :: 7
+					do move :: 5
 					do shoot :: 1
 				end if
 			end if
 		case 2
-			if(py < ey + me.distance)
-				do me.move :: 4
-			elif(px < ex - 30.0)
-				do me.move :: 2
-			elif(px > ex + 30.0)
-				do me.move :: 6
+			if(py > ey + 65.0)
+				do move :: 0
+			elif(py < ey - 65.0)
+				do move :: 4
 			else
-				if(me.time % 16 < 8)
-					do me.move :: 4
+				if(px < ex + distance)
+					do move :: 2
 				else
-					do me.move :: 0
+					do move :: 6
 					do shoot :: 1
 				end if
 			end if
 		case 3
-			var tx: float :: { -(py - ey).abs()}+ex - me.distance
-			var ty: float :: (px - ex).abs() + ey + me.distance
-			if(px < tx - 30.0)
-				do me.move :: 2
-			elif(px > tx + 30.0)
-				do me.move :: 6
-			elif(py < ty - 30.0)
-				do me.move :: 4
-			elif(py > ty + 30.0)
-				do me.move :: 0
+			var tx: float :: px
+			var ty: float :: (tx - ex).abs() * 1.0 + ey
+			if(py < ty - 65.0 & wallF <> 4)
+				do move :: 4
+			elif(py > ty + 65.0)
+				do move :: 0
+			elif(ex > px)
+				do move :: 2
 			else
-				if(me.time % 16 < 8)
-					do me.move :: 5
+				if(lib@sqrt((ex - px) ^ 2.0 + (ey - py) ^ 2.0) < distance)
+					do move :: 3
 				else
-					do me.move :: 1
+					do move :: 7
 					do shoot :: 1
 				end if
 			end if
 		case 4
-			if(px > ex - me.distance)
-				do me.move :: 6
-			elif(py < ey - 30.0)
-				do me.move :: 4
-			elif(py > ey + 30.0)
-				do me.move :: 0
+			if(px > ex + 65.0)
+				do move :: 6
+			elif(px < ex - 65.0)
+				do move :: 2
 			else
-				if(me.time % 16 < 8)
-					do me.move :: 6
+				if(py < ey + distance)
+					do move :: 4
 				else
-					do me.move :: 2
+					do move :: 0
 					do shoot :: 1
 				end if
 			end if
 		case 5
-			var tx: float :: { -(py - ey).abs() + }ex - me.distance
-			var ty: float :: -(px - ex).abs() + ey - me.distance
-			if(px < tx - 30.0)
-				do me.move :: 2
-			elif(px > tx + 30.0)
-				do me.move :: 6
-			elif(py < ty - 30.0)
-				do me.move :: 4
-			elif(py > ty + 30.0)
-				do me.move :: 0
+			var tx: float :: px
+			var ty: float :: (tx - ex).abs() * 1.0 + ey
+			if(py < ty - 65.0 & wallF <> 4)
+				do move :: 4
+			elif(py > ty + 65.0)
+				do move :: 0
+			elif(ex < px)
+				do move :: 6
 			else
-				if(me.time % 16 < 8)
-					do me.move :: 7
+				if(lib@sqrt((ex - px) ^ 2.0 + (ey - py) ^ 2.0) < distance)
+					do move :: 5
 				else
-					do me.move :: 3
+					do move :: 1
 					do shoot :: 1
 				end if
 			end if
 		case 6
-			if(py > ey - me.distance)
-				do me.move :: 0
-			elif(px < ex - 30.0)
-				do me.move :: 2
-			elif(px > ex + 30.0)
-				do me.move :: 6
+			if(py > ey + 65.0)
+				do move :: 0
+			elif(py < ey - 65.0)
+				do move :: 4
 			else
-				if(me.time % 16 < 8)
-					do me.move :: 0
+				if(px > ex - distance)
+					do move :: 6
 				else
-					do me.move :: 4
+					do move :: 2
 					do shoot :: 1
 				end if
 			end if
 		case 7
-			var tx: float :: {(py - ey).abs() +}ex + me.distance
-			var ty: float :: -(px - ex).abs() + ey - me.distance
-			if(px < tx - 30.0)
-				do me.move :: 2
-			elif(px > tx + 30.0)
-				do me.move :: 6
-			elif(py < ty - 30.0)
-				do me.move :: 4
-			elif(py > ty + 30.0)
-				do me.move :: 0
+			var tx: float :: px
+			var ty: float :: (tx - ex).abs() * -1.0 + ey
+			if(py < ty - 65.0)
+				do move :: 4
+			elif(py > ty + 65.0 & wallF <> 0)
+				do move :: 0
+			elif(ex < px)
+				do move :: 6
 			else
-				if(me.time % 16 < 8)
-					do me.move :: 1
+				if(lib@sqrt((ex - px) ^ 2.0 + (ey - py) ^ 2.0) < distance)
+					do move :: 7
 				else
-					do me.move :: 5
+					do move :: 3
 					do shoot :: 1
 				end if
 			end if
 		end switch
 		
 		
-		;弾同士がぶつかったら
-		if(((bpx - bex).abs() < 80.0 | (bpy - bey).abs() < 80.0) & me.time % 10 = 0)
-			do me.change_a :: 1
-		end if
-		;敵の弾が近づいたら
-		if(((px - bex).abs() < 150.0 | (py - bey).abs() < 150.0) & me.time % 10 = 0)
-			do me.change_a :: 1
-		end if
-		;敵に近づきすぎたら
-		if(((px - ex).abs() < 150.0 | (py - ey).abs() < 150.0) & me.time % 100 = 0)
-			do me.change_a :: 1
-		end if
-		do me.shoot :: shoot
+		;;;;;;;;;;;;;弾をよける;;;;;;;;;;;;;;;
+		var v: float :: 15.0 * 2.0
+		switch(bem)
+		case 0
+			if(((px - bex).abs() < 80.0 + v) & p.y - 50.0 < bey + 25.0)
+				if(bex > px & px > 100.0)
+					do move :: 6
+				else
+					do move :: 2
+				end if
+			end if
+		case 1
+			var ty: float :: py
+			var tx: float :: (py - bey) * -1.0 + bex
+			if((tx - px).abs() < 80.0 + v)
+				if(bex > px & px > 100.0)
+					do move :: 6
+				else
+					do move :: 2
+				end if
+			end if
+		case 2
+			if(((py - bey).abs() < 80.0 + v) & p.x + 50.0 > bex - 25.0)
+				if(bey > py & py > 100.0)
+					do move :: 0
+				else
+					do move :: 4
+				end if
+			end if
+		case 3
+			var ty: float :: py
+			var tx: float :: (py - bey) * 1.0 + bex
+			if((tx - px).abs() < 80.0 + v)
+				if(bex > px & px > 100.0)
+					do move :: 6
+				else
+					do move :: 2
+				end if
+			end if
+		case 4
+			if(((px - bex).abs() < 80.0 + v) & p.y + 50.0 > bey - 25.0)
+				if(bex > px & px > 100.0)
+					do move :: 6
+				else
+					do move :: 2
+				end if
+			end if
+		case 5
+			var ty: float :: py
+			var tx: float :: (py - bey) * -1.0 + bex
+			if((tx - px).abs() < 80.0 + v)
+				if(bex > px & px > 100.0)
+					do move :: 6
+				else
+					do move :: 2
+				end if
+			end if
+		case 6
+			if(((py - bey).abs() < 80.0 + v) & p.x - 50.0 < bex + 25.0)
+				if(bey > py & py > 100.0)
+					do move :: 0
+				else
+					do move :: 4
+				end if
+			end if
+		case 7
+			var ty: float :: py
+			var tx: float :: (py - bey) * 1.0 + bex
+			if((tx - px).abs() < 80.0 + v)
+				if(bex > px & px > 100.0)
+					do move :: 6
+				else
+					do move :: 2
+				end if
+			end if
+		end switch
+		;;;;;;;;;;;;;;;;;;;;;;;;;;
 		
-		if(me.change_a = 1 & me.time % 17 = 0)
-			do me.a_way :: (me.a_way + 1) % 8
-			do me.distance :+ 10.0
-			do me.change_a :: 0
-		end if
-		
-		ret[me.move, shoot]
+		ret[move, shoot]
 		
 	end func
 	
-	
+	;座標をマス目に変換
+	+func get_pos(x: float, y: float): int
+		var x_num: int :: 3
+		var y_num: int :: 3
+		var width: float :: \main@WIDTH / x_num $ float
+		var height: float :: \main@HEIGHT / y_num $ float
+		
+		var v: float :: 15.0
+		
+		if(x < 0.0)
+			do x :: 0.0
+		end if
+		if(x > \main@WIDTH)
+			do x :: \main@WIDTH
+		end if
+		if(y < 0.0)
+			do y :: 0.0
+		end if
+		if(y > \main@HEIGHT)
+			do y :: \main@HEIGHT
+		end if
+		for Y(0, y_num - 1)
+			for X(0, x_num - 1)
+				if(x >= X $ float * width & x <= (X $ float + 1.0) * width & y >= Y $ float * height & y <= (Y $ float + 1.0) * height)
+					ret X + Y * y_num
+				end if
+			end for
+		end for
+	end func
 	
 	
 	

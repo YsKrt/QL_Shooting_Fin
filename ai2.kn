@@ -6,8 +6,6 @@
 		var shoot: int
 		var move: int
 		;敵の方向を撃ち、敵の弾をよけるAI
-		do shoot :: lib@rnd(0, 1)
-		;敵の方向へ弾を撃つ
 		var p_pos: int :: me.get_next_pos(p.x, p.y, 8)
 		var px: int :: p_pos % @y_num
 		var py: int :: (p_pos - px) / @y_num
@@ -15,30 +13,39 @@
 		var ex: int :: e_pos % @y_num
 		var ey: int :: (e_pos - ex) / @y_num
 		if(px = ex)
-			if(lib@rnd(1, 100) <= 50)
+			if(py > ey)
 				do move :: 0
+				do shoot :: 1
 			else
 				do move :: 4
+				do shoot :: 1
 			end if
 		elif(py = ey)
-			if(lib@rnd(1, 100) <= 50)
+			if(px < ex)
 				do move :: 2
+				do shoot :: 1
 			else
 				do move :: 6
+				do shoot :: 1
 			end if
 		elif((px > ex & py > ey) | (px < ex & py < ey))
-			if(lib@rnd(1, 100) <= 50)
-				do move :: 3
-			else
+			if((px > ex & py > ey))
 				do move :: 7
+				do shoot :: 1
+			else
+				do move :: 3
+				do shoot :: 1
 			end if
 		elif((px > ex & py < ey) | (px < ex & py > ey))
-			if(lib@rnd(1, 100) <= 50)
-				do move :: 1
-			else
+			if((px > ex & py < ey))
 				do move :: 5
+				do shoot :: 1
+			else
+				do move :: 1
+				do shoot :: 1
 			end if
 		end if
+		
 		;敵の弾を避ける(こっちを敵に弾を当てるより優先するから下に書いている。)
 		do be.head()
 		while(!be.term())

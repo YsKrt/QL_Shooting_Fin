@@ -1,47 +1,58 @@
 ;エネミー基準
 +class Learn()
-	var pre_ehp: int
-	var pre_php: int
-	+var basenum: int
+	
+	const basenum: int :: 8
 	+var sigma: float
 	
-	+var base_ex: list<@Base>
-	+var base_ey: list<@Base>
-	+var base_px: list<@Base>
-	+var base_py: list<@Base>
-	+var base_bpx: list<@Base>
-	+var base_bpy: list<@Base>
-	+var base_bex: list<@Base>
-	+var base_bey: list<@Base>
+	+var base_ex: []list<@Base>
+	+var base_ey: []list<@Base>
+	+var base_px: []list<@Base>
+	+var base_py: []list<@Base>
+	+var base_bpx: []list<@Base>
+	+var base_bpy: []list<@Base>
+	+var base_bex: []list<@Base>
+	+var base_bey: []list<@Base>
 	
 	
 	*func ctor()
-		do me.pre_ehp :: 10
-		do me.pre_php :: 10
 		
-		do me.sigma :: 100.0
-		do me.basenum :: 3
+		do me.sigma :: 30.0
 		
-		do me.base_ex :: #list<@Base>
-		do me.base_ey :: #list<@Base>
-		do me.base_px :: #list<@Base>
-		do me.base_py :: #list<@Base>
-		do me.base_bex :: #list<@Base>
-		do me.base_bey :: #list<@Base>
-		do me.base_bpx :: #list<@Base>
-		do me.base_bpy :: #list<@Base>
+		do me.base_ex :: #[basenum ^ 2]list<@Base>
+		do me.base_ey :: #[basenum ^ 2]list<@Base>
+		do me.base_px :: #[basenum ^ 2]list<@Base>
+		do me.base_py :: #[basenum ^ 2]list<@Base>
+		do me.base_bex :: #[basenum ^ 2]list<@Base>
+		do me.base_bey :: #[basenum ^ 2]list<@Base>
+		do me.base_bpx :: #[basenum ^ 2]list<@Base>
+		do me.base_bpy :: #[basenum ^ 2]list<@Base>
 		
-		for(1, me.basenum)
-			var base: @Base :: #@Base
-			do me.base_ex.add(base)
-			do me.base_ey.add(base)
-			do me.base_px.add(base)
-			do me.base_py.add(base)
-			do me.base_bex.add(base)
-			do me.base_bey.add(base)
-			do me.base_bpx.add(base)
-			do me.base_bpy.add(base)
+		for i(0, basenum ^ 2 - 1)
+			do me.base_ex[i] :: #list<@Base>
+			do me.base_ey[i] :: #list<@Base>
+			do me.base_px[i] :: #list<@Base>
+			do me.base_py[i] :: #list<@Base>
+			do me.base_bex[i] :: #list<@Base>
+			do me.base_bey[i] :: #list<@Base>
+			do me.base_bpx[i] :: #list<@Base>
+			do me.base_bpy[i] :: #list<@Base>
 		end for
+		
+		
+		for i(0, basenum ^ 2 - 1)
+			for(1, basenum)
+				var base: @Base :: #@Base
+				do me.base_ex[i].add(base)
+				do me.base_ey[i].add(base)
+				do me.base_px[i].add(base)
+				do me.base_py[i].add(base)
+				do me.base_bex[i].add(base)
+				do me.base_bey[i].add(base)
+				do me.base_bpx[i].add(base)
+				do me.base_bpy[i].add(base)
+			end for
+		end for
+		
 	end func
 	
 	+func learn(e: \agent@Agent, p: \agent@Agent, be: list<\bullet@Bullet>, bp: list<\bullet@Bullet>): []int
@@ -84,6 +95,9 @@
 		var q_max: float :: 0.0
 		for move_next(0, 8)
 			var _exy: []float :: me.next_pos(move_next, e.x + e.width / 2.0, e.y + e.height / 2.0)
+			
+			var _e_dp: int :: me.discrete_pos(_exy[0], _exy[1])
+			
 			for shoot_next(0, 1)
 				var q_next: [][]float :: #[9, 2]float
 				if(bem = 8 & move_next <> 8)
@@ -95,80 +109,81 @@
 				end if
 				do _bexy :: me.next_pos(_bem, bex, bey)
 				
+				
 				;Qmaxをもとめる
 				var lcount: int :: 0
-				do me.base_ex.head()
-				do me.base_ey.head()
-				do me.base_px.head()
-				do me.base_py.head()
-				do me.base_bex.head()
-				do me.base_bey.head()
-				do me.base_bpx.head()
-				do me.base_bpy.head()
-				while(!me.base_ex.term())
+				do me.base_ex[_e_dp].head()
+				do me.base_ey[_e_dp].head()
+				do me.base_px[_e_dp].head()
+				do me.base_py[_e_dp].head()
+				do me.base_bex[_e_dp].head()
+				do me.base_bey[_e_dp].head()
+				do me.base_bpx[_e_dp].head()
+				do me.base_bpy[_e_dp].head()
+				while(!me.base_ex[_e_dp].term())
 					var base: @Base
 					var theta: float
 					var f: float
 					;ex
-					do base :: me.base_ex.get()
+					do base :: me.base_ex[_e_dp].get()
 					do theta :: base.theta
-					do f :: me.basefunc(_exy[0], \main@WIDTH $ float / (me.basenum $ float - 1.0) * lcount $ float, me.sigma * 2.0)
+					do f :: me.basefunc(_exy[0], \main@WIDTH $ float / (basenum $ float - 1.0) * lcount $ float, me.sigma * 2.0)
 					do q_next[move_next][shoot_next] :+ theta * f
 					if(base.q_max < f * theta | (move_next = 0 & shoot_next = 0))
 						do base.q_max :: f * theta
 					end if
 					;ey
-					do base :: me.base_ey.get()
+					do base :: me.base_ey[_e_dp].get()
 					do theta :: base.theta
-					do f :: me.basefunc(_exy[1], \main@HEIGHT $ float / (me.basenum $ float - 1.0) * lcount $ float, me.sigma)
+					do f :: me.basefunc(_exy[1], \main@HEIGHT $ float / (basenum $ float - 1.0) * lcount $ float, me.sigma)
 					do q_next[move_next][shoot_next] :+ theta * f
 					if(base.q_max < f * theta | (move_next = 0 & shoot_next = 0))
 						do base.q_max :: f * theta
 					end if
 					;px
-					do base :: me.base_px.get()
+					do base :: me.base_px[_e_dp].get()
 					do theta :: base.theta
-					do f :: me.basefunc(_pxy[0], \main@WIDTH $ float / (me.basenum $ float - 1.0) * lcount $ float, me.sigma * 2.0)
+					do f :: me.basefunc(_pxy[0], \main@WIDTH $ float / (basenum $ float - 1.0) * lcount $ float, me.sigma * 2.0)
 					do q_next[move_next][shoot_next] :+ theta * f
 					if(base.q_max < f * theta | (move_next = 0 & shoot_next = 0))
 						do base.q_max :: f * theta
 					end if
 					;py
-					do base :: me.base_py.get()
+					do base :: me.base_py[_e_dp].get()
 					do theta :: base.theta
-					do f :: me.basefunc(_pxy[1], \main@HEIGHT $ float / (me.basenum $ float - 1.0) * lcount $ float, me.sigma)
+					do f :: me.basefunc(_pxy[1], \main@HEIGHT $ float / (basenum $ float - 1.0) * lcount $ float, me.sigma)
 					do q_next[move_next][shoot_next] :+ theta * f
 					if(base.q_max < f * theta | (move_next = 0 & shoot_next = 0))
 						do base.q_max :: f * theta
 					end if
 					;bex
-					do base :: me.base_bex.get()
+					do base :: me.base_bex[_e_dp].get()
 					do theta :: base.theta
-					do f :: me.basefunc(_bexy[0], \main@WIDTH $ float / (me.basenum $ float - 1.0) * lcount $ float, me.sigma * 2.0)
+					do f :: me.basefunc(_bexy[0], \main@WIDTH $ float / (basenum $ float - 1.0) * lcount $ float, me.sigma * 2.0)
 					do q_next[move_next][shoot_next] :+ theta * f
 					if(base.q_max < f * theta | (move_next = 0 & shoot_next = 0))
 						do base.q_max :: f * theta
 					end if
 					;bey
-					do base :: me.base_bey.get()
+					do base :: me.base_bey[_e_dp].get()
 					do theta :: base.theta
-					do f :: me.basefunc(_bexy[1], \main@HEIGHT $ float / (me.basenum $ float - 1.0) * lcount $ float, me.sigma)
+					do f :: me.basefunc(_bexy[1], \main@HEIGHT $ float / (basenum $ float - 1.0) * lcount $ float, me.sigma)
 					do q_next[move_next][shoot_next] :+ theta * f
 					if(base.q_max < f * theta | (move_next = 0 & shoot_next = 0))
 						do base.q_max :: f * theta
 					end if
 					;bpx
-					do base :: me.base_bpx.get()
+					do base :: me.base_bpx[_e_dp].get()
 					do theta :: base.theta
-					do f :: me.basefunc(_bpxy[0], \main@WIDTH $ float / (me.basenum $ float - 1.0) * lcount $ float, me.sigma * 2.0)
+					do f :: me.basefunc(_bpxy[0], \main@WIDTH $ float / (basenum $ float - 1.0) * lcount $ float, me.sigma * 2.0)
 					do q_next[move_next][shoot_next] :+ theta * f
 					if(base.q_max < f * theta | (move_next = 0 & shoot_next = 0))
 						do base.q_max :: f * theta
 					end if
 					;bpy
-					do base :: me.base_bpy.get()
+					do base :: me.base_bpy[_e_dp].get()
 					do theta :: base.theta
-					do f :: me.basefunc(_bpxy[1], \main@HEIGHT $ float / (me.basenum $ float - 1.0) * lcount $ float, me.sigma)
+					do f :: me.basefunc(_bpxy[1], \main@HEIGHT $ float / (basenum $ float - 1.0) * lcount $ float, me.sigma)
 					do q_next[move_next][shoot_next] :+ theta * f
 					if(base.q_max < f * theta | (move_next = 0 & shoot_next = 0))
 						do base.q_max :: f * theta
@@ -176,14 +191,14 @@
 					
 					
 					do lcount :+ 1
-					do me.base_ex.next()
-					do me.base_ey.next()
-					do me.base_px.next()
-					do me.base_py.next()
-					do me.base_bex.next()
-					do me.base_bey.next()
-					do me.base_bpx.next()
-					do me.base_bpy.next()
+					do me.base_ex[_e_dp].next()
+					do me.base_ey[_e_dp].next()
+					do me.base_px[_e_dp].next()
+					do me.base_py[_e_dp].next()
+					do me.base_bex[_e_dp].next()
+					do me.base_bey[_e_dp].next()
+					do me.base_bpx[_e_dp].next()
+					do me.base_bpy[_e_dp].next()
 				end while
 				
 				if(q_max < q_next[move_next][shoot_next] | (move_next = 0 & shoot_next = 0))
@@ -198,70 +213,78 @@
 		;now
 		var r: float :: me.get_reward(e, p, bex, bey, bpx, bpy)
 		
+		var e_dp: int :: me.discrete_pos(e.x + e.width / 2.0, e.y + e.height / 2.0)
+		
 		var q: float
 		var lcount: int :: 0
-		do me.base_ex.head()
-		do me.base_ey.head()
-		do me.base_px.head()
-		do me.base_py.head()
-		do me.base_bex.head()
-		do me.base_bey.head()
-		do me.base_bpx.head()
-		do me.base_bpy.head()
-		while(!me.base_ex.term())
+		do me.base_ex[e_dp].head()
+		do me.base_ey[e_dp].head()
+		do me.base_px[e_dp].head()
+		do me.base_py[e_dp].head()
+		do me.base_bex[e_dp].head()
+		do me.base_bey[e_dp].head()
+		do me.base_bpx[e_dp].head()
+		do me.base_bpy[e_dp].head()
+		while(!me.base_ex[e_dp].term())
 			var base: @Base
-			
 			;ex
-			do base :: me.base_ex.get()
-			do base.f :: me.basefunc(e.x + e.width / 2.0, \main@WIDTH $ float / (me.basenum $ float - 1.0) * lcount $ float, me.sigma * 2.0)
+			do base :: me.base_ex[e_dp].get()
+			do base.f :: me.basefunc(e.x + e.width / 2.0, \main@WIDTH $ float / (basenum $ float - 1.0) * lcount $ float, me.sigma * 2.0)
 			do q :: base.f * base.theta
 			do base.theta :: me.update_theta(base.theta, 0.2, 0.8, base.q_max, q, r, base.f)
+			if(lcount = 0 | lcount = basenum - 1)
+				;端にいるのを防ぐ
+				do base.theta :: me.update_theta(base.theta, 0.2, 0.8, base.q_max, q, r - 10.0, base.f)
+			end if
 			;ey
-			do base :: me.base_ey.get()
-			do base.f :: me.basefunc(e.y + e.height / 2.0, \main@HEIGHT $ float / (me.basenum $ float - 1.0) * lcount $ float, me.sigma)
+			do base :: me.base_ey[e_dp].get()
+			do base.f :: me.basefunc(e.y + e.height / 2.0, \main@HEIGHT $ float / (basenum $ float - 1.0) * lcount $ float, me.sigma)
 			do q :: base.f * base.theta
 			do base.theta :: me.update_theta(base.theta, 0.2, 0.8, base.q_max, q, r, base.f)
+			if(lcount = 0 | lcount = basenum - 1)
+				do base.theta :: me.update_theta(base.theta, 0.2, 0.8, base.q_max, q, r - 10.0, base.f)
+			end if
 			;px
-			do base :: me.base_px.get()
-			do base.f :: me.basefunc(p.x + p.width / 2.0, \main@WIDTH $ float / (me.basenum $ float - 1.0) * lcount $ float, me.sigma * 2.0)
+			do base :: me.base_px[e_dp].get()
+			do base.f :: me.basefunc(p.x + p.width / 2.0, \main@WIDTH $ float / (basenum $ float - 1.0) * lcount $ float, me.sigma * 2.0)
 			do q :: base.f * base.theta
 			do base.theta :: me.update_theta(base.theta, 0.2, 0.8, base.q_max, q, r, base.f)
 			;py
-			do base :: me.base_py.get()
-			do base.f :: me.basefunc(p.y + p.height / 2.0, \main@HEIGHT $ float / (me.basenum $ float - 1.0) * lcount $ float, me.sigma)
+			do base :: me.base_py[e_dp].get()
+			do base.f :: me.basefunc(p.y + p.height / 2.0, \main@HEIGHT $ float / (basenum $ float - 1.0) * lcount $ float, me.sigma)
 			do q :: base.f * base.theta
 			do base.theta :: me.update_theta(base.theta, 0.2, 0.8, base.q_max, q, r, base.f)
 			;bex
-			do base :: me.base_bex.get()
-			do base.f :: me.basefunc(bex, \main@WIDTH $ float / (me.basenum $ float - 1.0) * lcount $ float, me.sigma * 2.0)
+			do base :: me.base_bex[e_dp].get()
+			do base.f :: me.basefunc(bex, \main@WIDTH $ float / (basenum $ float - 1.0) * lcount $ float, me.sigma * 2.0)
 			do q :: base.f * base.theta
 			do base.theta :: me.update_theta(base.theta, 0.2, 0.8, base.q_max, q, r, base.f)
 			;bey
-			do base :: me.base_bey.get()
-			do base.f :: me.basefunc(bey, \main@HEIGHT $ float / (me.basenum $ float - 1.0) * lcount $ float, me.sigma)
+			do base :: me.base_bey[e_dp].get()
+			do base.f :: me.basefunc(bey, \main@HEIGHT $ float / (basenum $ float - 1.0) * lcount $ float, me.sigma)
 			do q :: base.f * base.theta
 			do base.theta :: me.update_theta(base.theta, 0.2, 0.8, base.q_max, q, r, base.f)
 			;bpx
-			do base :: me.base_bpx.get()
-			do base.f :: me.basefunc(bpx, \main@WIDTH $ float / (me.basenum $ float - 1.0) * lcount $ float, me.sigma * 2.0)
+			do base :: me.base_bpx[e_dp].get()
+			do base.f :: me.basefunc(bpx, \main@WIDTH $ float / (basenum $ float - 1.0) * lcount $ float, me.sigma * 2.0)
 			do q :: base.f * base.theta
 			do base.theta :: me.update_theta(base.theta, 0.2, 0.8, base.q_max, q, r, base.f)
 			;bpy
-			do base :: me.base_bpy.get()
-			do base.f :: me.basefunc(bpy, \main@HEIGHT $ float / (me.basenum $ float - 1.0) * lcount $ float, me.sigma)
+			do base :: me.base_bpy[e_dp].get()
+			do base.f :: me.basefunc(bpy, \main@HEIGHT $ float / (basenum $ float - 1.0) * lcount $ float, me.sigma)
 			do q :: base.f * base.theta
 			do base.theta :: me.update_theta(base.theta, 0.2, 0.8, base.q_max, q, r, base.f)
 			
 			
 			do lcount :+ 1
-			do me.base_ex.next()
-			do me.base_ey.next()
-			do me.base_px.next()
-			do me.base_py.next()
-			do me.base_bex.next()
-			do me.base_bey.next()
-			do me.base_bpx.next()
-			do me.base_bpy.next()
+			do me.base_ex[e_dp].next()
+			do me.base_ey[e_dp].next()
+			do me.base_px[e_dp].next()
+			do me.base_py[e_dp].next()
+			do me.base_bex[e_dp].next()
+			do me.base_bey[e_dp].next()
+			do me.base_bpx[e_dp].next()
+			do me.base_bpy[e_dp].next()
 		end while
 		
 		if(q_max = 0.0 | lib@rnd(1, 10) = 1)
@@ -286,15 +309,11 @@
 	+func get_reward(e: \agent@Agent, p: \agent@Agent, bex: float, bey: float, bpx: float, bpy: float): float
 		var reward: float :: 0.0
 		var v: float :: 15.0 * 3.0
-		var wallflag: int :: 0
-		if(e.x + e.width / 2.0 < 50.0 + 1.0 | e.y + e.height / 2.0 < 50.0 + 1.0 | e.x + e.width / 2.0 > \main@WIDTH - (50.0 + 1.0) | e.y + e.height / 2.0 > \main@HEIGHT - (50.0 + 1.0))
-			do wallflag :: 1
-			do reward :+ -777.7
-		end if
+		
 		if((p.x + p.width / 2.0 - bex).abs() < p.width / 2.0 + 25.0 + v & (p.y + p.height / 2.0 - bey).abs() < p.height / 2.0 + 25.0 + v)
 			do reward :+ 55.5
 		end if
-		if(((e.x + e.width / 2.0 - bpx).abs() < e.width / 2.0 + 25.0 + v & (e.y + e.height / 2.0 - bpy).abs() < e.height / 2.0 + 25.0 + v) & wallflag = 0)
+		if(((e.x + e.width / 2.0 - bpx).abs() < e.width / 2.0 + 25.0 + v & (e.y + e.height / 2.0 - bpy).abs() < e.height / 2.0 + 25.0 + v))
 			do reward :+ -77.7
 		end if
 		
@@ -337,10 +356,36 @@
 		end switch
 		ret[x_next, y_next]
 	end func
-	+func init()
-		do me.pre_ehp :: 10
-		do me.pre_php :: 10
+	
+	;座標をマス目に変換
+	+func discrete_pos(x: float, y: float): int
+		
+		var width: float :: \main@WIDTH / basenum $ float
+		var height: float :: \main@HEIGHT / basenum $ float
+		
+		var v: float :: 15.0
+		
+		if(x < 0.0)
+			do x :: 0.0
+		end if
+		if(x > \main@WIDTH)
+			do x :: \main@WIDTH
+		end if
+		if(y < 0.0)
+			do y :: 0.0
+		end if
+		if(y > \main@HEIGHT)
+			do y :: \main@HEIGHT
+		end if
+		for Y(0, basenum - 1)
+			for X(0, basenum - 1)
+				if(x >= X $ float * width & x <= (X $ float + 1.0) * width & y >= Y $ float * height & y <= (Y $ float + 1.0) * height)
+					ret X + Y * basenum
+				end if
+			end for
+		end for
 	end func
+	
 	+func savefile(traincount: int, count: int, filename: []char, readcount: int)
 		var savecount: int
 		var savedata: []char :: ""
@@ -354,56 +399,58 @@
 			do savecount :: 1000
 		end if
 		
-		if(count % savecount = 0)
+		if(count % savecount = 0 & count > 0)
 			var handle: file@Writer :: file@makeWriter(filename ~ "_\{readcount + count}.txt", false)
 			
-			do me.base_ex.head()
-			do me.base_ey.head()
-			do me.base_px.head()
-			do me.base_py.head()
-			do me.base_bex.head()
-			do me.base_bey.head()
-			do me.base_bpx.head()
-			do me.base_bpy.head()
-			while(!me.base_ex.term())
-				var base: @Base
-				;ex
-				do base :: me.base_ex.get()
-				do savedata :~ "\{base.theta},"
-				;ey
-				do base :: me.base_ey.get()
-				do savedata :~ "\{base.theta},"
-				;px
-				do base :: me.base_px.get()
-				do savedata :~ "\{base.theta},"
-				;py
-				do base :: me.base_py.get()
-				do savedata :~ "\{base.theta},"
-				;bex
-				do base :: me.base_bex.get()
-				do savedata :~ "\{base.theta},"
-				;bey
-				do base :: me.base_bey.get()
-				do savedata :~ "\{base.theta},"
-				;bpx
-				do base :: me.base_bpx.get()
-				do savedata :~ "\{base.theta},"
-				;bpy
-				do base :: me.base_bpy.get()
-				do savedata :~ "\{base.theta},"
+			for dp(0, basenum ^ 2 - 1)
 				
-				do me.base_ex.next()
-				do me.base_ey.next()
-				do me.base_px.next()
-				do me.base_py.next()
-				do me.base_bex.next()
-				do me.base_bey.next()
-				do me.base_bpx.next()
-				do me.base_bpy.next()
-			end while
-			
-			do handle.writeStr(savedata)
-			
+				do me.base_ex[dp].head()
+				do me.base_ey[dp].head()
+				do me.base_px[dp].head()
+				do me.base_py[dp].head()
+				do me.base_bex[dp].head()
+				do me.base_bey[dp].head()
+				do me.base_bpx[dp].head()
+				do me.base_bpy[dp].head()
+				while(!me.base_ex[dp].term())
+					var base: @Base
+					;ex
+					do base :: me.base_ex[dp].get()
+					do savedata :~ "\{base.theta},"
+					;ey
+					do base :: me.base_ey[dp].get()
+					do savedata :~ "\{base.theta},"
+					;px
+					do base :: me.base_px[dp].get()
+					do savedata :~ "\{base.theta},"
+					;py
+					do base :: me.base_py[dp].get()
+					do savedata :~ "\{base.theta},"
+					;bex
+					do base :: me.base_bex[dp].get()
+					do savedata :~ "\{base.theta},"
+					;bey
+					do base :: me.base_bey[dp].get()
+					do savedata :~ "\{base.theta},"
+					;bpx
+					do base :: me.base_bpx[dp].get()
+					do savedata :~ "\{base.theta},"
+					;bpy
+					do base :: me.base_bpy[dp].get()
+					do savedata :~ "\{base.theta},"
+					
+					do me.base_ex[dp].next()
+					do me.base_ey[dp].next()
+					do me.base_px[dp].next()
+					do me.base_py[dp].next()
+					do me.base_bex[dp].next()
+					do me.base_bey[dp].next()
+					do me.base_bpx[dp].next()
+					do me.base_bpy[dp].next()
+				end while
+				
+				do handle.writeStr(savedata)
+			end for
 			do handle.fin()
 			do \learn@resulttxt :~ "保存しました。 t=\{(lib@sysTime() $ float - \main@start_time $ float) / 1000.0 / 60.0}分\n"
 			do dbg@print("保存しました\n")
@@ -415,52 +462,53 @@
 			var handle: file@Reader :: file@makeReader(filename ~ "_\{traincount}.txt")
 			do handle.delimiter([',']) {区切り文字の設定}
 			
-			
-			do me.base_ex.head()
-			do me.base_ey.head()
-			do me.base_px.head()
-			do me.base_py.head()
-			do me.base_bex.head()
-			do me.base_bey.head()
-			do me.base_bpx.head()
-			do me.base_bpy.head()
-			while(!me.base_ex.term())
-				var base: @Base
-				;ex
-				do base :: me.base_ex.get()
-				do base.theta :: handle.readFloat()
-				;ey
-				do base :: me.base_ey.get()
-				do base.theta :: handle.readFloat()
-				;px
-				do base :: me.base_px.get()
-				do base.theta :: handle.readFloat()
-				;py
-				do base :: me.base_py.get()
-				do base.theta :: handle.readFloat()
-				;bex
-				do base :: me.base_bex.get()
-				do base.theta :: handle.readFloat()
-				;bey
-				do base :: me.base_bey.get()
-				do base.theta :: handle.readFloat()
-				;bpx
-				do base :: me.base_bpx.get()
-				do base.theta :: handle.readFloat()
-				;bpy
-				do base :: me.base_bpy.get()
-				do base.theta :: handle.readFloat()
+			for dp(0, basenum ^ 2 - 1)
 				
-				do me.base_ex.next()
-				do me.base_ey.next()
-				do me.base_px.next()
-				do me.base_py.next()
-				do me.base_bex.next()
-				do me.base_bey.next()
-				do me.base_bpx.next()
-				do me.base_bpy.next()
-			end while
-			
+				do me.base_ex[dp].head()
+				do me.base_ey[dp].head()
+				do me.base_px[dp].head()
+				do me.base_py[dp].head()
+				do me.base_bex[dp].head()
+				do me.base_bey[dp].head()
+				do me.base_bpx[dp].head()
+				do me.base_bpy[dp].head()
+				while(!me.base_ex[dp].term())
+					var base: @Base
+					;ex
+					do base :: me.base_ex[dp].get()
+					do base.theta :: handle.readFloat()
+					;ey
+					do base :: me.base_ey[dp].get()
+					do base.theta :: handle.readFloat()
+					;px
+					do base :: me.base_px[dp].get()
+					do base.theta :: handle.readFloat()
+					;py
+					do base :: me.base_py[dp].get()
+					do base.theta :: handle.readFloat()
+					;bex
+					do base :: me.base_bex[dp].get()
+					do base.theta :: handle.readFloat()
+					;bey
+					do base :: me.base_bey[dp].get()
+					do base.theta :: handle.readFloat()
+					;bpx
+					do base :: me.base_bpx[dp].get()
+					do base.theta :: handle.readFloat()
+					;bpy
+					do base :: me.base_bpy[dp].get()
+					do base.theta :: handle.readFloat()
+					
+					do me.base_ex[dp].next()
+					do me.base_ey[dp].next()
+					do me.base_px[dp].next()
+					do me.base_py[dp].next()
+					do me.base_bex[dp].next()
+					do me.base_bey[dp].next()
+					do me.base_bpx[dp].next()
+					do me.base_bpy[dp].next()
+				end while
+			end for
 			do handle.fin()
 			do dbg@print("ファイル読み込み完了,t=\{(lib@sysTime() $ float - \main@start_time $ float) / 1000.0}秒\n")
 			do \learn@resulttxt :~ "ファイル読み込み完了,t=\{(lib@sysTime() $ float - \main@start_time $ float) / 1000.0}秒\n"

@@ -1,0 +1,361 @@
++class Learn()
+	const input_size: int :: 8
+	const hidden_size: int :: 100
+	const output_size: int :: 1
+	const eta: float :: 0.01
+	+var train: int
+	const b: float :: 0.0
+	;nn()のflag
+	;0 sigmoid
+	;1 ReLU
+	;2 tanh
+	;3 step
+	
+	
+	var x_list: list<float>
+	var y_list: list<float>
+	var t_list: list<float>
+	
+	var input: []float
+	var hidden: []float
+	+var output: []float
+	var weight_ih: [][]float
+	var weight_ho: [][]float
+	
+	var teacher: []float
+	
+	*func ctor()
+		do me.x_list :: #list<float>
+		do me.y_list :: #list<float>
+		do me.t_list :: #list<float>
+		;入力層と隠れ層の[0]には1
+		;重みの[0]にはバイアスを用意する
+		do me.input :: #[input_size + 1]float
+		do me.hidden :: #[hidden_size + 1]float
+		do me.output :: #[output_size]float
+		do me.teacher :: #[output_size]float
+		do me.weight_ih :: #[input_size + 1, hidden_size + 1]float
+		do me.weight_ho :: #[hidden_size + 1, output_size]float
+		;1の出力
+		do me.input[0] :: 1.0
+		do me.hidden[0] :: 1.0
+		;バイアスの代入
+		for h(1, hidden_size)
+			do me.weight_ih[0][h] :: b
+		end for
+		for o(0, output_size - 1)
+			do me.weight_ho[0][o] :: b
+		end for
+		;重みの初期化
+		;全て同じ値を使うと更新してもすべて同じ値になってしまい意味がなくなる！！！
+		for i(1, input_size)
+			for h(1, hidden_size)
+				do me.weight_ih[i][h] :: lib@rndFloat(-10.0, 10.0)
+				for o(0, output_size - 1)
+					do me.weight_ho[h][o] :: lib@rndFloat(-10.0, 10.0)
+				end for
+			end for
+		end for
+		
+	end func
+	
+	+func learn(e: \agent@Agent, p: \agent@Agent, be: list<\bullet@Bullet>, bp: list<\bullet@Bullet>): []int
+		var move: int
+		var shoot: int
+		;;
+		;now
+		var bex: float :: -999.9
+		var bey: float :: -999.9
+		var bpx: float :: -999.9
+		var bpy: float :: -999.9
+		var bpm: int :: 8
+		var bem: int :: 8
+		if(^be <> 0)
+			do be.head()
+			do bem :: be.get().flag
+			do bex :: be.get().x + be.get().width / 2.0
+			do bey :: be.get().y + be.get().height / 2.0
+		end if
+		if(^bp <> 0)
+			do bp.head()
+			do bpm :: bp.get().flag
+			do bpx :: bp.get().x + bp.get().width / 2.0
+			do bpy :: bp.get().y + bp.get().height / 2.0
+		end if
+		;next
+		var _bpm: int :: 8
+		var _bem: int :: 8
+		var _pxy: []float :: me.next_pos(p.moveF, p.x + p.width / 2.0, p.y + p.height / 2.0)
+		var _bexy: []float
+		
+		if(^bp <> 0)
+			do bp.head()
+			do _bpm :: bpm
+		end if
+		var _bpxy: []float :: me.next_pos(_bpm, bpx, bpy)
+		
+		;next
+		var q_max: float :: 0.0
+		for move_next(0, 8)
+			var _exy: []float :: me.next_pos(move_next, e.x + e.width / 2.0, e.y + e.height / 2.0)
+			for shoot_next(0, 1)
+				var q_next: [][]float :: #[9, 2]float
+				if(bem = 8 & move_next <> 8 & shoot_next = 1)
+					;弾を出してなくてこれから撃つ場合
+					do _bem :: move_next
+					do _bexy :: me.next_pos(_bem, e.x + e.width / 2.0, e.y + e.height / 2.0)
+				elif(bem <> 8)
+					;弾がすでに飛んでいる場合
+					do _bem :: bem
+					do _bexy :: me.next_pos(_bem, bex, bey)
+				else
+					;弾を出してなくて撃たない場合
+					do _bem :: 8
+					do _bexy :: me.next_pos(_bem, bex, bey)
+				end if
+				
+				
+				var input: []float :: [_exy[0], _exy[1], _pxy[0], _pxy[1], _bexy[0], _bexy[1], _bpxy[0], _bpxy[1]]
+				var output: []float :: me.nn(input, [0.0], 0, 0)
+				do q_next[move_next][shoot_next] :: output[0]
+				
+				if(q_max < q_next[move_next][shoot_next] | (move_next = 0 & shoot_next = 0))
+					do q_max :: q_next[move_next][shoot_next]
+					;行動選択
+					do move :: move_next
+					do shoot :: shoot_next
+				end if
+			end for
+		end for
+		
+		;now
+		var r: float :: me.get_reward(e, p, bex, bey, bpx, bpy)
+		var input: []float :: [p.x + p.width / 2.0, p.y + p.height / 2.0, e.x + e.width / 2.0, e.y + e.height / 2.0, bex, bey, bpx, bpy]
+		var output: []float :: me.nn(input, [0.0], 0, 0)
+		var Q: float :: output[0] + 0.2 * (r + 0.8 * q_max - output[0])
+		;更新
+		do me.nn(input, [Q], 0, 1)
+		
+		if(q_max = 0.0 | lib@rnd(1, 10) <= 1)
+			do move :: lib@rnd(0, 7)
+			do shoot :: lib@rnd(0, 1)
+		end if
+		
+		;;
+		ret[move, shoot]
+	end func
+	
+	
+	+func nn(input: []float, teacher: []float, flag: int, trainF: int): []float
+		;入力
+		for i(1, input_size)
+			do me.input[i] :: input[i - 1]
+		end for
+		
+		for o(0, output_size - 1)
+			do me.teacher[o] :: teacher[o]
+		end for
+		;入力層から隠れ層へ
+		for h(1, hidden_size)
+			var hid: float :: 0.0
+			for i(0, input_size)
+				do hid :+ me.input[i] * me.weight_ih[i][h]
+			end for
+			switch(flag)
+			case 0
+				do me.hidden[h] :: me.sigmoid(hid)
+			case 1
+				do me.hidden[h] :: me.ReLU(hid)
+			case 2
+				do me.hidden[h] :: me.tanh(hid)
+			case 3
+				do me.hidden[h] :: me.step(hid)
+			end switch
+		end for
+		;隠れ層から出力層へ
+		for o(0, output_size - 1)
+			var out: float :: 0.0
+			for h(0, hidden_size)
+				do out :+ me.hidden[h] * me.weight_ho[h][o]
+			end for
+			do me.output[o] :: out
+		end for
+		;重みの更新
+		if(trainF = 1)
+			do me.update_w(flag)
+		end if
+		
+		ret me.output
+	end func
+	
+	+func update_w(flag: int)
+		;二乗誤差の勾配(の一部)
+		var dE: float
+		do dE :: me.d_MSE(me.output, me.teacher)
+		for o(0, output_size - 1)
+			for h(0, hidden_size)
+				;出力層と隠れ層の間の重みとバイアスの更新
+				var dw_ho: float :: -eta * dE * me.hidden[h]
+				do me.weight_ho[h][o] :+ dw_ho
+				for i(0, input_size)
+					;隠れ層と入力層の間の重みとバイアスの更新
+					var dw_ih: float
+					switch(flag)
+					case 0
+						;sigmoid
+						do dw_ih :: -eta * dE * me.weight_ho[h][o] * (me.input[i] * me.d_sigmoid(me.hidden[h]))
+					case 1
+						;ReLU
+						do dw_ih :: me.hidden[h] > 0.0 ?(-eta * dE * me.weight_ho[h][o] * me.input[i], 0.0)
+					case 2
+						;tanh
+						do dw_ih :: -eta * dE * me.weight_ho[h][o] * (me.input[i] * me.d_tanh(me.hidden[h]))
+					case 3
+						;step
+						do dw_ih :: me.hidden[h] > 0.0 ?(-eta * dE * me.weight_ho[h][o] * me.input[i], 0.0)
+					end switch
+					
+					do me.weight_ih[i][h] :+ dw_ih
+				end for
+			end for
+		end for
+	end func
+	
+	+func MSE(out: []float, tea: []float): float
+		var sum: float
+		for o(0, output_size - 1)
+			do sum :+ (out[o] - tea[o]) ^ 2.0
+		end for
+		ret sum / output_size $ float
+	end func
+	
+	+func d_MSE(out: []float, tea: []float): float
+		var sum: float
+		for o(0, output_size - 1)
+			do sum :+ (out[o] - tea[o])
+		end for
+		ret sum / (output_size * hidden_size) $ float
+	end func
+	
+	+func tanh(x: float): float
+		ret lib@tanh(x)
+	end func
+	+func d_tanh(f: float): float
+		ret 1.0 - f ^ 2.0
+	end func
+	
+	+func step(x: float): float
+		ret x > 0.0 ?(1.0, 0.0)
+	end func
+	
+	+func ReLU(x: float): float
+		ret x > 0.0 ?(x / 100.0, 0.0)
+	end func
+	
+	+func sigmoid(x: float): float
+		ret 1.0 / (1.0 + lib@e ^ -(x / 100.0))
+	end func
+	
+	+func d_sigmoid(f: float): float
+		ret f * (1.0 - f)
+	end func
+	
+	+func get_reward(e: \agent@Agent, p: \agent@Agent, bex: float, bey: float, bpx: float, bpy: float): float
+		var reward: float :: 0.0
+		var v: float :: 15.0 * 3.0
+		
+		if((p.x + p.width / 2.0 - bex).abs() < p.width / 2.0 + 25.0 + v & (p.y + p.height / 2.0 - bey).abs() < p.height / 2.0 + 25.0 + v)
+			do reward :+ 5.5
+		end if
+		if(((e.x + e.width / 2.0 - bpx).abs() < e.width / 2.0 + 25.0 + v & (e.y + e.height / 2.0 - bpy).abs() < e.height / 2.0 + 25.0 + v))
+			do reward :- 7.7
+		end if
+		ret reward
+	end func
+	
+	+func next_pos(move: int, x: float, y: float): []float
+		var x_next: float
+		var y_next: float
+		var v: float :: 15.0
+		switch(move)
+		case 0
+			do x_next :: x
+			do y_next :: y - v
+		case 1
+			do x_next :: x + v
+			do y_next :: y - v
+		case 2
+			do x_next :: x + v
+			do y_next :: y
+		case 3
+			do x_next :: x + v
+			do y_next :: y + v
+		case 4
+			do x_next :: x
+			do y_next :: y + v
+		case 5
+			do x_next :: x - v
+			do y_next :: y + v
+		case 6
+			do x_next :: x - v
+			do y_next :: y
+		case 7
+			do x_next :: x - v
+			do y_next :: y - v
+		case 8
+			do x_next :: x
+			do y_next :: y
+		end switch
+		ret[x_next, y_next]
+	end func
+	
+	+func savefile(traincount: int, count: int, filename: []char, readcount: int)
+		var savecount: int
+		var savedata: []char :: ""
+		if(traincount <= 100)
+			do savecount :: 10
+		elif(traincount <= 1000)
+			do savecount :: 100
+		elif(traincount <= 3000)
+			do savecount :: 500
+		else
+			do savecount :: 1000
+		end if
+		
+		if(count % savecount = 0 & count > 0)
+			var handle: file@Writer :: file@makeWriter(filename ~ "_\{readcount + count}.txt", false)
+			for i(0, input_size)
+				for h(0, hidden_size)
+					do savedata :~ "\{me.weight_ih[i][h]},"
+					for o(0, output_size - 1)
+						do savedata :~ "\{me.weight_ho[h][o]},"
+					end for
+				end for
+			end for
+			do handle.writeStr(savedata)
+			do handle.fin()
+			do \learn@resulttxt :~ "保存しました。 t=\{(lib@sysTime() $ float - \main@start_time $ float) / 1000.0 / 60.0}分\n"
+			do dbg@print("保存しました\n")
+		end if
+	end func
+	
+	+func readfile(filename: []char, traincount: int)
+		if(file@exist(filename ~ "_\{traincount}.txt"))
+			var handle: file@Reader :: file@makeReader(filename ~ "_\{traincount}.txt")
+			do handle.delimiter([',']) {区切り文字の設定}
+			
+			for i(0, input_size)
+				for h(0, hidden_size)
+					do me.weight_ih[i][h] :: handle.readFloat()
+					for o(0, output_size - 1)
+						do me.weight_ho[h][o] :: handle.readFloat()
+					end for
+				end for
+			end for
+			do handle.fin()
+			do dbg@print("ファイル読み込み完了,t=\{(lib@sysTime() $ float - \main@start_time $ float) / 1000.0}秒\n")
+			do \learn@resulttxt :~ "ファイル読み込み完了,t=\{(lib@sysTime() $ float - \main@start_time $ float) / 1000.0}秒\n"
+		end if
+	end func
+	
+end class

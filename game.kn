@@ -119,6 +119,79 @@
 	+func draw()
 		do draw@render(60)
 		
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;状態価値を描画
+		;learn1の描画用
+		var bpp: int
+		var bpm: int
+		var bep: int
+		var bem: int
+		var ep: int :: me.learn.learn1_p.get_next_pos(me.e.x + me.e.width / 2.0, me.e.y + me.e.height / 2.0, 8)
+		if(^me.bp <> 0)
+			do me.bp.head()
+			do bpp :: me.learn.learn1_p.get_next_pos(me.bp.get().x + me.bp.get().width / 2.0, me.bp.get().y + me.bp.get().height / 2.0, 8)
+			do bpm :: me.bp.get().flag
+		else
+			do bpp :: \learn1@x_num * \learn1@y_num
+			do bpm :: 8
+		end if
+		var pm: int :: me.p.moveF
+		if(^me.be <> 0)
+			do me.be.head()
+			do bep :: me.learn.learn1_p.get_next_pos(me.be.get().x + me.be.get().width / 2.0, me.be.get().y + me.be.get().height / 2.0, 8)
+			do bem :: me.be.get().flag
+		else
+			do bep :: \learn1@x_num * \learn1@y_num
+			do bem :: 8
+		end if
+		
+		;learn3の描画用
+		var bex: float :: -999.9
+		var bey: float :: -999.9
+		var bpx: float :: -999.9
+		var bpy: float :: -999.9
+		if(^me.be <> 0)
+			do me.be.head()
+			do bex :: me.be.get().x + me.be.get().width / 2.0
+			do bey :: me.be.get().y + me.be.get().height / 2.0
+		end if
+		if(^me.bp <> 0)
+			do me.bp.head()
+			do bpx :: me.bp.get().x + me.bp.get().width / 2.0
+			do bpy :: me.bp.get().y + me.bp.get().height / 2.0
+		end if
+		;
+		const num: int :: 8
+		var dx: float :: \main@WIDTH / num $ float
+		var dy: float :: \main@HEIGHT / num $ float
+		for x(0, num)
+			for y(0, num)
+				{
+				;learn3用_e
+				var input: []float :: [me.p.x + me.p.width / 2.0, me.p.y + me.p.height / 2.0, x $ float * dx + me.e.width / 2.0, y $ float * dy + me.e.height / 2.0, bex, bey, bpx, bpy]
+				var output: []float :: me.learn.learn3_e.nn(input, [0.0], 0, 0)
+				if(output[0] >= 0.0)
+					do draw2d@rect(x $ float * dx, y $ float * dy, (x $ float + 1.0) * dx, (y $ float + 1.0) * dy, 0xFFFFFFFF - output[0] $ int * 100)
+				elif(output[0] < 0.0)
+					do draw2d@rect(x $ float * dx, y $ float * dy, (x $ float + 1.0) * dx, (y $ float + 1.0) * dy, -output[0] $ int * 100)
+				end if
+				;
+				}
+				;learn1用_p(プレイヤーでもQテーブルはエネミー基準)
+				{
+				var pp: int :: me.learn.learn1_p.get_next_pos(x $ float * dx + dx / 2.0, y $ float * dy + dy / 2.0, 8)
+				var q: float :: \learn1@q_table[ep][bep][pp][bpp]
+				if(q >= 0.0)
+					do draw2d@rect(x $ float * dx, y $ float * dy, (x $ float + 1.0) * dx, (y $ float + 1.0) * dy, 0xFFFFFFFF - q $ int * 100)
+				elif(q < 0.0)
+					do draw2d@rect(x $ float * dx, y $ float * dy, (x $ float + 1.0) * dx, (y $ float + 1.0) * dy, -q $ int * 100)
+				end if
+				;
+				}
+			end for
+		end for
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		
 		do \main@font.draw(\main@WIDTH - 300.0, 1.0, "Enemy HP:\{me.e.hp}", 0xFFCCCCFF)
 		do draw2d@rect(me.e.x, me.e.y, me.e.width, me.e.height, 0xFF3333CC)
 		do \main@font.draw(1.0, 1.0, "Player HP:\{me.p.hp}", 0xFFFFCCCC)

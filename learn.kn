@@ -13,57 +13,104 @@
 	+var traincount: int
 	
 	;AI
-	var ai1: \ai1@AI
-	var ai2: \ai2@AI
-	var ai3: \ai3@AI
-	var ai4: \ai4@AI
-	var ai5: \ai5@AI
-	var learn1: \learn1@Learn
-	var learn2: \learn2@Learn
-	var manual: \manual@Manual
+	var ai1_e: \ai1@AI
+	var ai2_e: \ai2@AI
+	var ai3_e: \ai3@AI
+	var ai4_e: \ai4@AI
+	var ai5_e: \ai5@AI
+	var learn1_e: \learn1@Learn
+	var learn2_e: \learn2@Learn
+	+var learn3_e: \learn3@Learn
+	var manual_e: \manual@Manual
+	
+	var ai1_p: \ai1@AI
+	var ai2_p: \ai2@AI
+	var ai3_p: \ai3@AI
+	var ai4_p: \ai4@AI
+	var ai5_p: \ai5@AI
+	+var learn1_p: \learn1@Learn
+	var learn2_p: \learn2@Learn
+	var learn3_p: \learn3@Learn
+	var manual_p: \manual@Manual
+	
 	
 	*func ctor()
 		do me.count :: 0
 		do @resulttxt :: ""
-		do me.ai1 :: #\ai1@AI
-		do me.ai2 :: #\ai2@AI
-		do me.ai3 :: #\ai3@AI
-		do me.ai4 :: #\ai4@AI
-		do me.ai5 :: #\ai5@AI
-		do me.learn1 :: #\learn1@Learn
-		do me.learn2 :: #\learn2@Learn
-		do me.manual :: #\manual@Manual
+		do me.ai1_e :: #\ai1@AI
+		do me.ai2_e :: #\ai2@AI
+		do me.ai3_e :: #\ai3@AI
+		do me.ai4_e :: #\ai4@AI
+		do me.ai5_e :: #\ai5@AI
+		do me.learn1_e :: #\learn1@Learn
+		do me.learn2_e :: #\learn2@Learn
+		do me.learn3_e :: #\learn3@Learn
+		do me.manual_e :: #\manual@Manual
+		
+		do me.ai1_p :: #\ai1@AI
+		do me.ai2_p :: #\ai2@AI
+		do me.ai3_p :: #\ai3@AI
+		do me.ai4_p :: #\ai4@AI
+		do me.ai5_p :: #\ai5@AI
+		do me.learn1_p :: #\learn1@Learn
+		do me.learn2_p :: #\learn2@Learn
+		do me.learn3_p :: #\learn3@Learn
+		do me.manual_p :: #\manual@Manual
 	end func
 	
 	+func prepare()
+		;ロード
 		switch(me.flag_e)
 		case 6
-			do me.learn1.readfile("q_table", me.readcount)
+			do me.learn1_e.readfile("q_table_e", me.readcount)
 		case 7
-			do me.learn2.readfile("theta", me.readcount)
+			do me.learn2_e.readfile("theta_e", me.readcount)
+		case 8
+			do me.learn3_e.readfile("nn_e", me.readcount)
+		end switch
+		
+		switch(me.flag_p)
+		case 6
+			do me.learn1_p.readfile("q_table_p", me.readcount)
+		case 7
+			do me.learn2_p.readfile("theta_p", me.readcount)
+		case 8
+			do me.learn3_p.readfile("nn_p", me.readcount)
 		end switch
 	end func
 	+func finish()
 		var log_file: []char :: "log"
+		;ここはあとでなおす
 		switch(me.flag_e)
 		case 6
 			do log_file :: "q_learn_log"
-			do me.learn1.addlog()
+			do me.learn1_e.addlog()
 		end switch
 		do file@delFile("now_data.txt")
 		do me.writefile(log_file)
 	end func
 	
 	+func init(e: \agent@Agent, p: \agent@Agent)
+		;セーブ
 		switch(me.flag_e)
 		case 6
-			do me.learn1.init()
-			do me.learn1.savefile(me.traincount, me.count, "q_table", me.readcount)
+			do me.learn1_e.init()
+			do me.learn1_e.savefile(me.traincount, me.count, "q_table_e", me.readcount)
 		case 7
-			do me.learn2.init()
-			do me.learn2.savefile(me.traincount, me.count, "theta", me.readcount)
+			do me.learn2_e.savefile(me.traincount, me.count, "theta_e", me.readcount)
+		case 8
+			do me.learn3_e.savefile(me.traincount, me.count, "nn_e", me.readcount)
 		end switch
 		
+		switch(me.flag_p)
+		case 6
+			do me.learn1_p.init()
+			do me.learn1_p.savefile(me.traincount, me.count, "q_table_p", me.readcount)
+		case 7
+			do me.learn2_p.savefile(me.traincount, me.count, "theta_p", me.readcount)
+		case 8
+			do me.learn3_p.savefile(me.traincount, me.count, "nn_p", me.readcount)
+		end switch
 		do me.show(e, p)
 		
 	end func
@@ -92,31 +139,35 @@
 		switch(me.flag_e)
 		case 0
 			;マニュアル
-			do action :: me.manual.control()
+			do action :: me.manual_e.control()
 		case 1
 			;アタッカー
-			do action :: me.ai1.control(p, e, bp, be)
+			do action :: me.ai1_e.control(p, e, bp, be)
 		case 2
 			;避けて8方向に攻撃
-			do action :: me.ai2.control(p, e, bp, be)
+			do action :: me.ai2_e.control(p, e, bp, be)
 		case 3
 			;ランダム
-			do action :: me.ai3.control()
+			do action :: me.ai3_e.control()
 		case 4
 			;山田のAI１つめ
-			do action :: me.ai4.control(p, e, bp, be)
+			do action :: me.ai4_e.control(p, e, bp, be)
 		case 5
 			;山田のAI２つめ
 			;エネミー基準
-			do action :: me.ai5.control(e, p, be, bp)
+			do action :: me.ai5_e.control(e, p, be, bp)
 		case 6
 			;Q学習8*8
 			;エネミー基準
-			do action :: me.learn1.learn(e, p, be, bp)
+			do action :: me.learn1_e.learn(e, p, be, bp)
 		case 7
 			;関数近似
 			;エネミー基準
-			do action :: me.learn2.learn(e, p, be, bp)
+			do action :: me.learn2_e.learn(e, p, be, bp)
+		case 8
+			;NN
+			;エネミー基準
+			do action :: me.learn3_e.learn(e, p, be, bp)
 		end switch
 		
 		ret[action[0], action[1]]
@@ -128,25 +179,36 @@
 		switch(me.flag_p)
 		case 0
 			;マニュアル
-			do action :: me.manual.control()
+			do action :: me.manual_p.control()
 		case 1
 			;アタッカー
 			;プレイヤー基準
-			do action :: me.ai1.control(e, p, be, bp)
+			do action :: me.ai1_p.control(e, p, be, bp)
 		case 2
 			;避けて8方向に攻撃
 			;プレイヤー基準
-			do action :: me.ai2.control(e, p, be, bp)
+			do action :: me.ai2_p.control(e, p, be, bp)
 		case 3
 			;ランダム
-			do action :: me.ai3.control()
+			do action :: me.ai3_p.control()
 		case 4
 			;山田のAI１つめ
 			;プレイヤー基準
-			do action :: me.ai4.control(e, p, be, bp)
+			do action :: me.ai4_p.control(e, p, be, bp)
 		case 5
 			;山田のAI２つめ
-			do action :: me.ai5.control(p, e, bp, be)
+			do action :: me.ai5_p.control(p, e, bp, be)
+		case 6
+			;Q学習8*8
+			;エネミー基準
+			do action :: me.learn1_p.learn(p, e, bp, be)
+		case 7
+			;関数近似
+			;エネミー基準
+			do action :: me.learn2_p.learn(p, e, bp, be)
+		case 8
+			;NN
+			do action :: me.learn3_p.learn(p, e, bp, be)
 		end switch
 		
 		ret[action[0], action[1]]

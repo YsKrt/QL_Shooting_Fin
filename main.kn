@@ -8,7 +8,7 @@
 func main()
 	
 	var result: []char
-	do result :: wndex@inputBox(null, "学習回数, 読み込む回数, PlayerF, EnemyF", "Q Learning", "0,0,0,7", null)
+	do result :: wndex@inputBox(null, "学習回数, 読み込む回数, PlayerF, EnemyF", "Q Learning", "0,0,0,8", null)
 	
 	if(result =& null)
 		ret
